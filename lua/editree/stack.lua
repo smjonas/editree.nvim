@@ -6,11 +6,13 @@ end
 
 function M:top()
   local value = self[#self]
-  assert(value, "attempting to pop empty stack")
+  assert(value, "stack is empty")
 	return value
 end
 
 function M:pop()
+  local value = self[#self]
+  assert(value, "attempting to pop empty stack")
 	table.remove(self, #self)
 end
 
