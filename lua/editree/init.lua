@@ -1,5 +1,9 @@
 local M = {}
 
+---@type number
+local tmp_buf
+local old_tree
+
 local fern = {
 	filetype = "fern",
 	is_file = function(file)
@@ -8,13 +12,12 @@ local fern = {
 	is_directory = function(dir)
 		return dir:match("/$")
 	end,
-	-- Remove prefixes
-	strip_pattern = { "^%s*|[%-%+]?", "$" },
+	strip_patterns = { parser = { "^%s*|[%-%+]?", "$" }, tmp_buf = { "$" } },
 	skip_first_line = true,
 }
 
-local strip_line = function(line)
-	for _, pattern in ipairs(fern.strip_pattern) do
+local strip_line = function(line, patterns)
+	for _, pattern in ipairs(patterns or fern.strip_patterns.parser) do
 		line = line:gsub(pattern, "")
 	end
 	return line
@@ -66,14 +69,13 @@ M.parse_tree = function()
 	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 	parse_contents(lines)
 end
-local old_tree
 
 local group = vim.api.nvim_create_augroup("editree", {})
 vim.api.nvim_create_autocmd("InsertEnter", {
 	group = group,
 	callback = function()
 		print("enter")
-    old_tree = M.parse_tree()
+		old_tree = M.parse_tree()
 	end,
 })
 
@@ -81,17 +83,48 @@ vim.api.nvim_create_autocmd("InsertLeave", {
 	group = group,
 	callback = function()
 		print("leave")
-    local new_tree = M.parse_tree()
+		local new_tree = M.parse_tree()
 	end,
 })
+
+-- Creates a temporary (singleton) buffer that
+-- contains the modifiable tree view.
+local create_tmp_buffer = function()
+	local tmp_buf = vim.api.nvim_create_buf(false, true)
+	vim.bo[tmp_buf].filetype = "editree"
+	vim.bo[tmp_buf].bufhidden = "wipe"
+	vim.api.nvim_create_autocmd("BufUnload", {
+		group = group,
+		buffer = tmp_buf,
+		once = true,
+		callback = function()
+			print("del")
+		end,
+	})
+	return tmp_buf
+end
+
+---@param tmp_buf number
+local populate_tmp_buffer = function(tmp_buf)
+	local contents = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+	contents = vim.tbl_map(function(line)
+		return strip_line(line, fern.strip_patterns.tmp_buf)
+	end, contents)
+	vim.api.nvim_buf_set_lines(tmp_buf, 0, -1, true, contents)
+	vim.api.nvim_set_current_buf(tmp_buf)
+	print("crei", #contents)
+end
 
 vim.api.nvim_create_autocmd("FileType", {
 	group = group,
 	pattern = fern.filetype,
 	callback = function()
-		vim.schedule(function()
-			vim.bo[0].modifiable = true
-		end)
+		vim.keymap.set("n", "o", function()
+			if not tmp_buf then
+				tmp_buf = create_tmp_buffer()
+			end
+      populate_tmp_buffer(tmp_buf)
+		end, { buffer = true })
 	end,
 })
 
