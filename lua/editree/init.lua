@@ -11,21 +11,36 @@ local adapter
 local group = vim.api.nvim_create_augroup("editree", {})
 
 local setup_autocmds = function()
-	vim.iter(require("editree.viewers")):map(function(viewer)
-		vim.api.nvim_create_autocmd("FileType", {
-			group = group,
-			pattern = viewer.filetype,
-			callback = function()
-        local x = vim.api.nvim_buf_get_name(0)
-        print(x)
+	local viewers = require("editree.viewers")
+	local filetypes = vim.iter(require("editree.viewers"))
+		:map(function(_, viewer)
+			return viewer.filetype
+		end)
+		:totable()
+
+	vim.api.nvim_create_autocmd("FileType", {
+		group = group,
+		pattern = filetypes,
+		callback = function(event)
+			local viewer = viewers[event.match]
+			viewer.set_on_enter_callback(function()
 				adapter.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false))
-			end,
-		})
-	end)
+			end)
+		end,
+	})
+
+	vim.api.nvim_create_autocmd("User", {
+		pattern = "FernHighlight",
+		callback = function()
+			vim.schedule(function()
+				-- vim.print(vim.api.nvim_buf_line_count(0))
+			end)
+		end,
+	})
 end
 
 M.setup = function()
-  adapter = require("editree.oil_adapter")
+	adapter = require("editree.oil_adapter")
 	setup_autocmds()
 end
 

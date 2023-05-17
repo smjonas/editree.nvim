@@ -24,6 +24,7 @@ end
 ---@param lines string[] is modified by this function (with IDs prepended)
 ---@return Tree tree, string[] updated_lines the constructed tree, the updated lines with IDs added at the beginning of each node
 local parse_tree = function(view, lines)
+  lines[1] = view:strip_line(lines[1])
 	local tree = require("editree.tree").new(lines[1])
 	local cur_dir = tree
 	local last_seen_dir_at_depth = { [-1] = cur_dir }
@@ -37,7 +38,7 @@ local parse_tree = function(view, lines)
 	for i = 2, #lines do
 		local line = lines[i]
 		local id = id_manager.get_id()
-		lines[i] = id .. line
+		lines[i] = ("%s %s"):format(id, view:strip_line(line))
 
 		-- Count number of leading whitespaces
 		local depth = #line:gsub("^(%s*)", "%1")
@@ -76,10 +77,11 @@ end
 ---@return Tree
 function M.init_from_view(view, lines)
 	ensure_buffer()
-  local tree, updated_lines = parse_tree(view, lines)
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, updated_lines)
-  vim.print(updated_lines)
-  return tree
+	local tree, updated_lines = parse_tree(view, lines)
+	vim.api.nvim_set_current_buf(bufnr)
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, updated_lines)
+	-- vim.print(lines)
+	return tree
 end
 
 -- ---@type augroup integer

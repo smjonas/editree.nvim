@@ -21,7 +21,7 @@ end
 ---@return string
 M.get_id = function()
   assert(max_num_ids, "max_num_ids not set")
-	local id = M.format_id(cur_id, max_num_ids)
+	local id = format_id(cur_id, max_num_ids)
 	cur_id = cur_id + 1
 	return id
 end
