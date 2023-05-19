@@ -18,6 +18,10 @@ local setup_autocmds = function()
 		end)
 		:totable()
 
+  local on_write_callback = function()
+    print("write")
+  end
+
 	vim.api.nvim_create_autocmd("FileType", {
 		group = group,
 		pattern = filetypes,
@@ -27,15 +31,7 @@ local setup_autocmds = function()
 				adapter.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false))
 			end)
 		end,
-	})
-
-	vim.api.nvim_create_autocmd("User", {
-		pattern = "FernHighlight",
-		callback = function()
-			vim.schedule(function()
-				-- vim.print(vim.api.nvim_buf_line_count(0))
-			end)
-		end,
+    desc = "Initialize editree buffer for supported filetypes",
 	})
 end
 
