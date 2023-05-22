@@ -119,10 +119,6 @@ local parse_tree_with_ids = function(view, lines)
 	return tree
 end
 
-local compare_trees = function(old_tree, new_tree)
-
-end
-
 ---@param view View
 local ensure_buffer = function(view)
 	if bufnr then
@@ -149,7 +145,7 @@ function M.init_from_view(view, lines, on_diff)
 		callback = function()
 			local updated_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 			local modified_tree = parse_tree_with_ids(view, updated_lines)
-      local diff = compute_diff(tree, modified_tree)
+			local diff = compute_diff(tree, modified_tree)
 			on_diff(diff)
 		end,
 		description = "Write editree buffer",

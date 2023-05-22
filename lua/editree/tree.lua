@@ -1,22 +1,25 @@
----@class Tree
----@field name string
----@field id string
----@field type NodeType
----@field children Tree[]
+---@type Tree
 local M = {}
 
----@enum NodeType
-M.NodeType = {
-	DIRECTORY = 1,
-	FILE = 2,
-}
+---@class Tree
+---@field type string
+---@field name string
+---@field id string
+---@field id_to_child_map fun(): table<string, Tree>
+
+---@class Directory : Tree
+---@field type "directory"
+---@field children Tree[]
+
+---@class File : Tree
+---@field type "file"
 
 ---@param name string
 ---@param id string?
----@param type NodeType?
+---@param type "directory" | "file" | nil
 function M.new(name, id, type)
-	assert(type == nil or type == M.NodeType.DIRECTORY or type == M.NodeType.FILE)
-	local self = { name = name, id = id, type = type or M.NodeType.DIRECTORY, children = {} }
+	assert(type == nil or type == "directory" or type == "file")
+	local self = { name = name, id = id, type = type or "directory", children = {} }
 	return setmetatable(self, {
 		__index = M,
 		__tostring = function()
@@ -27,52 +30,119 @@ end
 
 ---@param name string
 ---@param id string?
+---@return Directory
 function M:add_dir(name, id)
-	assert(self.type == M.NodeType.DIRECTORY)
-	local dir = M.new(name, id, M.NodeType.DIRECTORY)
+	assert(self.type == "directory")
+	local dir = M.new(name, id, "directory")
 	table.insert(self.children, dir)
 	return dir
 end
 
 ---@param name string
 ---@param id string?
----@return Tree #the inserted file
+---@return File
 function M:add_file(name, id)
-	assert(self.type == M.NodeType.DIRECTORY, "attempting to add file to non-directory")
-  local file = M.new(name, id, M.NodeType.FILE)
+	assert(self.type == "directory", "attempting to add file to non-directory")
+	local file = M.new(name, id, "file")
 	table.insert(self.children, file)
-  return file
+	return file
 end
 
 ---@return table<string, Tree>
 function M:id_to_child_map()
-	assert(self.type == M.NodeType.DIRECTORY, "attempting to get child of non-directory")
-	return vim.iter(self.children)
-		:map(function(child)
-			return child.id, child
-		end)
-		:totable()
+	assert(self.type == "directory", "attempting to get child of non-directory")
+	local map = {}
+	for _, child in ipairs(self.children) do
+		map[child.id] = child
+	end
+	return map
 end
 
+---@param self Directory
 ---@param id string
----@return Tree? child #the removed child if it could be removed  or nil if the child with the given ID did not exist
+---@return Tree? child #the removed child if it could be removed or nil if the child with the given ID did not exist
 function M:remove_child_by_id(id)
+	assert(self.type == "directory")
 	local idx = -1
 	for i, child in ipairs(self.children) do
 		if child.id == id then
 			idx = i
 		end
 	end
-  if idx == -1 then
-    return nil
-  end
+	if idx == -1 then
+		return nil
+	end
 	return table.remove(self.children, idx)
+end
+
+---@param self Directory
+---@param ids_to_remove string[]
+function M:remove_children_by_ids(ids_to_remove)
+	assert(self.type == "directory")
+	self.children = vim.iter(self.children)
+		:filter(function(child)
+			return not ids_to_remove[child.id]
+		end)
+		:totable()
+end
+
+---Returns a map mapping from the ID to a list of nodes with that ID.
+---@param self Directory
+---@param id_map table<string, list<Tree>>?
+---@return boolean
+function M:get_recursive_id_map(id_map)
+	assert(self.type == "directory")
+	id_map = id_map or vim.defaulttable(function()
+		return { nodes = {} }
+	end)
+	for _, child in ipairs(self.children) do
+    if child.id then
+      table.insert(id_map[child.id].nodes, child)
+    end
+
+		if child.type == "directory" then
+			child:get_recursive_id_map(id_map)
+		end
+	end
+	return id_map
+end
+
+---@param self Directory
+---@return boolean
+function M:contains_unique_names()
+	assert(self.type == "directory")
+	local saw_name = {}
+	for _, child in ipairs(self.children) do
+		if saw_name[child.name] then
+			return false
+		end
+		saw_name[child.name] = true
+	end
+	return true
+end
+
+---@param self Directory
+---@param type "directory" | "file"
+---@param fn fun(Tree)
+function M:for_each(type, fn)
+	assert(self.type == "directory")
+	if self.type == type then
+		fn(self)
+	end
+	for _, child in ipairs(self.children) do
+		if child.type == type then
+			fn(child)
+		end
+		if child.type == "directory" then
+			child:for_each(type, fn)
+		end
+	end
 end
 
 ---@param depth integer
 function M:to_string(depth)
-	local is_dir = self.type == M.NodeType.DIRECTORY
-	local result = (" "):rep(depth) .. self.name .. "\n"
+	local is_dir = self.type == "directory"
+	local result = ("%s%s%s\n"):format((" "):rep(depth), self.id and self.id .. "/ " or "", self.name, "\n")
 
 	if is_dir then
 		for _, child in ipairs(self.children) do
@@ -83,7 +153,7 @@ function M:to_string(depth)
 end
 
 function M:clone()
-  return vim.deepcopy(self)
+	return vim.deepcopy(self)
 end
 
 return M
