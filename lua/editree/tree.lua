@@ -5,6 +5,7 @@ local M = {}
 ---@field type string
 ---@field name string
 ---@field id string
+---@field parent Tree?
 ---@field id_to_child_map fun(): table<string, Tree>
 
 ---@class Directory : Tree
@@ -19,7 +20,7 @@ local M = {}
 ---@param type "directory" | "file" | nil
 function M.new(name, id, type)
 	assert(type == nil or type == "directory" or type == "file")
-	local self = { name = name, id = id, type = type or "directory", children = {} }
+	local self = { name = name, id = id, type = type or "directory", parent = nil, children = {} }
 	return setmetatable(self, {
 		__index = M,
 		__tostring = function()
@@ -34,6 +35,7 @@ end
 function M:add_dir(name, id)
 	assert(self.type == "directory")
 	local dir = M.new(name, id, "directory")
+	dir.parent = self
 	table.insert(self.children, dir)
 	return dir
 end
@@ -44,8 +46,13 @@ end
 function M:add_file(name, id)
 	assert(self.type == "directory", "attempting to add file to non-directory")
 	local file = M.new(name, id, "file")
+	file.parent = self
 	table.insert(self.children, file)
 	return file
+end
+
+function M:is_root()
+	return self.parent == nil
 end
 
 ---@return table<string, Tree>
@@ -96,9 +103,9 @@ function M:get_recursive_id_map(id_map)
 		return { nodes = {} }
 	end)
 	for _, child in ipairs(self.children) do
-    if child.id then
-      table.insert(id_map[child.id].nodes, child)
-    end
+		if child.id then
+			table.insert(id_map[child.id].nodes, child)
+		end
 
 		if child.type == "directory" then
 			child:get_recursive_id_map(id_map)
@@ -122,19 +129,19 @@ function M:contains_unique_names()
 end
 
 ---@param self Directory
----@param type "directory" | "file"
+---@param type "directory" | "file" | nil
 ---@param fn fun(Tree)
-function M:for_each(type, fn)
+function M:for_each(fn, type)
 	assert(self.type == "directory")
-	if self.type == type then
+	if type == nil or self.type == type then
 		fn(self)
 	end
 	for _, child in ipairs(self.children) do
-		if child.type == type then
+		if type == nil or child.type == type then
 			fn(child)
 		end
 		if child.type == "directory" then
-			child:for_each(type, fn)
+			child:for_each(fn, type)
 		end
 	end
 end
