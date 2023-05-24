@@ -20,7 +20,7 @@ local bufnr
 ---@param lines string[] is modified by this function (with IDs prepended)
 ---@return Tree tree, string[] updated_lines the constructed tree, the updated lines with IDs added at the beginning of each node
 local parse_tree = function(view, lines)
-	lines[1] = view:strip_line(lines[1])
+	lines[1] = view.strip_line(lines[1])
 	local tree = require("editree.tree").new(lines[1])
 	local cur_dir = tree
 	local last_seen_dir_at_depth = { [-1] = cur_dir }
@@ -46,14 +46,14 @@ local parse_tree = function(view, lines)
 			end
 		end
 
-		line = view:strip_line(line)
-		lines[i] = ("/%s %s"):format(id, line)
-		local stripped_line = line:gsub("^%s*(.*)", "%1")
+    lines[i] = ("/%s %s"):format(id, view.strip_line(line))
+    local name = view.parse_entry(line)
+		-- local stripped_line = line:gsub("^%s*(.*)", "%1")
 
-		if view.is_file(line) then
-			dir_stack:top():add_file(stripped_line, id)
-		elseif view.is_directory(line) then
-			local dir = last_seen_dir_at_depth[cur_depth]:add_dir(stripped_line, id)
+		if view.is_file(name) then
+			dir_stack:top():add_file(name, id)
+		elseif view.is_directory(name) then
+			local dir = last_seen_dir_at_depth[cur_depth]:add_dir(name, id)
 			if depth > cur_depth then
 				-- Moving down in the tree
 				last_seen_dir_at_depth[depth] = cur_dir
@@ -72,7 +72,14 @@ end
 ---@param lines string[]
 ---@return boolean success, Tree? tree
 local parse_tree_with_ids = function(view, lines)
-	lines[1] = view:strip_line(lines[1])
+	-- Remove blank lines
+	lines = vim.iter(lines)
+		:filter(function(line)
+			return line:find("^%s*$")
+		end)
+		:totable()
+
+	-- lines[1] = view:strip_line(lines[1])
 	local tree = require("editree.tree").new(lines[1])
 	local cur_dir = tree
 	local last_seen_dir_at_depth = { [-1] = cur_dir }
@@ -84,6 +91,7 @@ local parse_tree_with_ids = function(view, lines)
 
 	for i = 2, #lines do
 		local line = lines[i]
+
 		local _, _, id = line:find("^/(%d+) ")
 		if id then
 			if tonumber(id) > max_id or tonumber(id) == 0 then
@@ -109,7 +117,7 @@ local parse_tree_with_ids = function(view, lines)
 
 		-- Remove leading whitespaces and other patterns
 		line = line:gsub("^%s*", "")
-		line = view:strip_line(line)
+		-- line = view:strip_line(line)
 
 		if view.is_file(line) then
 			dir_stack:top():add_file(line, id)
@@ -127,17 +135,6 @@ local parse_tree_with_ids = function(view, lines)
 		cur_depth = depth
 	end
 	return true, tree
-end
-
-local ensure_buffer = function(buf_name)
-	if bufnr then
-		return
-	end
-	bufnr = vim.api.nvim_create_buf(false, false)
-	vim.api.nvim_buf_set_name(bufnr, buf_name)
-	vim.bo[bufnr].filetype = "editree"
-	vim.bo[bufnr].bufhidden = "wipe"
-	vim.bo[bufnr].modified = false
 end
 
 ---@param diff Diff
@@ -177,6 +174,39 @@ local apply_diffs = function(root_path, diffs)
 	end)
 end
 
+local ensure_buffer = function(buf_name)
+	if bufnr then
+		return
+	end
+	bufnr = vim.api.nvim_create_buf(false, false)
+	vim.api.nvim_buf_set_name(bufnr, buf_name)
+	local winid = vim.api.nvim_get_current_win()
+
+	local buf_opts = {
+		syntax = "editree",
+		filetype = "editree",
+		bufhidden = "wipe",
+		modified = false,
+	}
+	local x = "filetype"
+	for k, v in pairs(buf_opts) do
+		vim.api.nvim_set_option_value(k, v, { buf = bufnr })
+	end
+
+	local win_opts = {
+		wrap = false,
+		signcolumn = "no",
+		cursorcolumn = false,
+		foldcolumn = "0",
+		spell = false,
+		list = false,
+		conceallevel = 3,
+		concealcursor = "n",
+	}
+	for k, v in pairs(win_opts) do
+		vim.api.nvim_set_option_value(k, v, { win = winid })
+	end
+end
 --- Parses the buffer lines given the active view.
 ---@param view View
 ---@param lines string[]

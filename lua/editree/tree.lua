@@ -6,6 +6,7 @@ local M = {}
 ---@field name string
 ---@field id string
 ---@field parent Tree?
+---@field depth integer
 ---@field id_to_child_map fun(): table<string, Tree>
 
 ---@class Directory : Tree
@@ -20,7 +21,7 @@ local M = {}
 ---@param type "directory" | "file" | nil
 function M.new(name, id, type)
 	assert(type == nil or type == "directory" or type == "file")
-	local self = { name = name, id = id, type = type or "directory", parent = nil, children = {} }
+	local self = { name = name, id = id, type = type or "directory", parent = nil, children = {}, depth = 0 }
 	return setmetatable(self, {
 		__index = M,
 		__tostring = function()
@@ -40,6 +41,7 @@ function M:add_dir(name, id)
 	assert(self.type == "directory")
 	local dir = M.new(name, id, "directory")
 	dir.parent = self
+  dir.depth = self.depth + 1
 	table.insert(self.children, dir)
 	return dir
 end
@@ -51,6 +53,7 @@ function M:add_file(name, id)
 	assert(self.type == "directory", "attempting to add file to non-directory")
 	local file = M.new(name, id, "file")
 	file.parent = self
+  file.depth = self.depth + 1
 	table.insert(self.children, file)
 	return file
 end
