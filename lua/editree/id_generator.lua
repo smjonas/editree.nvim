@@ -13,7 +13,7 @@ end
 ---@return string
 local format_id = function(id, max_id)
 	local id_str_length = math.max(3, 1 + math.floor(math.log10(max_id)))
-	local cached_id_fmt = "/%0" .. string.format("%d", id_str_length) .. "d"
+	local cached_id_fmt = "%0" .. string.format("%d", id_str_length) .. "d"
 	return cached_id_fmt:format(id)
 end
 

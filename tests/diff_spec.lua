@@ -1,4 +1,3 @@
-local Tree = require("editree.tree")
 local diff = require("editree.diff")
 
 local remove_parents = function(diffs)
@@ -74,12 +73,12 @@ describe("diff", function()
 		assert.diffs_equal(expected, diff.compute(old, new))
 	end)
 
-	it("should work for simple insertion", function()
+	it("should work for simple creation", function()
 		local old = Tree.new("root")
 		local new = Tree.new("root")
 		local file = new:add_file("file1.txt", nil)
 
-		local expected = { { type = "new", node = file } }
+		local expected = { { type = "create", node = file } }
 		local x = diff.compute(old, new)
 		assert.diffs_equal(expected, x)
 	end)

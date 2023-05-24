@@ -1,28 +1,25 @@
 ---@class View
----@field filetype string
 ---@field set_on_enter_callback fun(fun)
 ---@field is_file fun(string): boolean
 ---@field is_directory fun(string): boolean
 ---@field strip_patterns string[]?
 ---@field strip_line fun(View, string): string
 ---@field skip_first_line boolean
+---@field get_root_path fun(): string
 
 local View = {
 	---@param view View
 	---@param line string
 	strip_line = function(view, line)
-		print(#view.strip_patterns)
 		for _, pattern in ipairs(view.strip_patterns or {}) do
-      print(line, pattern)
 			line = line:gsub(pattern, "")
-      print(line)
 		end
 		return line
 	end,
 }
 
 ---@type View
-local fern = setmetatable({
+local fern = {
 	filetype = "fern",
 	set_on_enter_callback = function(on_enter)
 		vim.fn["fern#hook#add"]("viewer:ready", function()
@@ -36,12 +33,18 @@ local fern = setmetatable({
 		return dir:match("/$")
 	end,
 	-- strip_patterns = { "^%s*|[%-%+]?", "$" },
-	strip_patterns = { "$" },
+	strip_patterns = { "^|[%-%+]?", "$" },
 	skip_first_line = true,
-}, { __index = View })
+	get_root_path = function()
+		local helper = vim.fn["fern#helper#new"]()
+		return helper.fern.root._path
+	end,
+}
+fern = setmetatable(fern, { __index = View })
 
 local M = {
 	fern = fern,
 }
 
+---@type table<string, View>
 return M

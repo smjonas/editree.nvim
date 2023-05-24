@@ -10,17 +10,13 @@ local adapter
 
 local group = vim.api.nvim_create_augroup("editree", {})
 
-local setup_autocmds = function()
+local setup_autocmds = function(oil_files)
 	local viewers = require("editree.viewers")
 	local filetypes = vim.iter(require("editree.viewers"))
 		:map(function(_, viewer)
 			return viewer.filetype
 		end)
 		:totable()
-
-  local on_write_callback = function()
-    print("write")
-  end
 
 	vim.api.nvim_create_autocmd("FileType", {
 		group = group,
@@ -31,11 +27,16 @@ local setup_autocmds = function()
 				adapter.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false))
 			end)
 		end,
-    desc = "Initialize editree buffer for supported filetypes",
+		desc = "Initialize editree buffer for supported filetypes",
 	})
 end
 
 M.setup = function()
+	local ok, _ = pcall(require, "oil.adapters.files")
+	if not ok then
+		vim.notify("editree.nvim: module oil.adapters.files not found, please install oil.nvim", vim.log.levels.ERROR)
+    return
+	end
 	adapter = require("editree.oil_adapter")
 	setup_autocmds()
 end

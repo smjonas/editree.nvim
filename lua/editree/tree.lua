@@ -29,6 +29,10 @@ function M.new(name, id, type)
 	})
 end
 
+function M:is_root()
+	return self.parent == nil
+end
+
 ---@param name string
 ---@param id string?
 ---@return Directory
@@ -51,8 +55,17 @@ function M:add_file(name, id)
 	return file
 end
 
-function M:is_root()
-	return self.parent == nil
+---Returns the path relative to the root directory
+---@return string
+function M:get_rel_path()
+	local parts = {}
+	local node = self
+	while not node:is_root() do
+		table.insert(parts, node.name)
+		node = node.parent
+	end
+	parts = vim.iter(parts):rev():totable()
+	return vim.fs.joinpath((table.unpack or unpack)(parts))
 end
 
 ---@return table<string, Tree>

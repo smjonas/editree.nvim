@@ -1,9 +1,9 @@
 local M = {}
 
----@alias Diff DiffNew
+---@alias Diff DiffCreate | DiffCopy | DiffDelete | DiffMove | DiffRename
 
----@class DiffNew
----@field type "new"
+---@class DiffCreate
+---@field type "create"
 ---@field node Tree
 
 ---@class DiffCopy
@@ -88,7 +88,7 @@ local compute_inserts = function(old_tree, new_tree, diffs)
 	end
 	new_tree:for_each(function(node)
 		if node.id == nil and not node:is_root() then
-			table.insert(diffs, { type = "new", node = node })
+			table.insert(diffs, { type = "create", node = node })
 		end
 	end)
 end
@@ -108,9 +108,10 @@ local verify_trees = function(old_tree, new_tree)
 	end
 
 	local old_id_map = old_tree:get_recursive_id_map()
+
 	for new_id, _ in pairs(new_tree:get_recursive_id_map()) do
 		if vim.tbl_isempty(old_id_map[new_id].nodes) then
-			return false, "unknown ID in new tree"
+			return false, "unknown ID in new tree" .. new_id
 		end
 	end
 	return true
@@ -118,17 +119,25 @@ end
 
 ---@param old_tree Tree
 ---@param new_tree Tree
----@return Diff | string
+---@return boolean success, any
 M.compute = function(old_tree, new_tree)
 	local diffs = {}
 
 	local ok, err = verify_trees(old_tree, new_tree)
 	if not ok then
-		return err
+		return false, err
 	end
 	compute_diffs(old_tree, old_tree:get_recursive_id_map(), new_tree, new_tree:get_recursive_id_map(), diffs)
 	compute_inserts(old_tree, new_tree, diffs)
-	return diffs
+	return true, diffs
 end
 
 return M
+
+---@class oil.CreateAction
+---@field type "create"
+---@field url string
+---@field entry_type oil.EntryType
+---@field link nil|string
+
+
