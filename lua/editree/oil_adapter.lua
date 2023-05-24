@@ -143,7 +143,6 @@ end
 ---@param diff Diff
 local diff_to_action = function(root_path, diff)
 	local url = ("oil://%s"):format(vim.fs.joinpath(root_path, diff.node:get_rel_path()))
-	print(url)
 	local entry_type = diff.node.type
 	-- if diff.type == "create" then
 	return { type = "create", url = url, entry_type = entry_type }

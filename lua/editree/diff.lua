@@ -1,28 +1,29 @@
 local M = {}
 
----@alias Diff DiffCreate | DiffCopy | DiffDelete | DiffMove | DiffRename
+---@alias Diff DiffCreate | DiffDelete | DiffRename | DiffCopy | DiffMove
 
 ---@class DiffCreate
 ---@field type "create"
 ---@field node Tree
 
----@class DiffCopy
----@field type "copy"
----@field node Tree
----@field to Tree
-
 ---@class DiffDelete
 ---@field type "delete"
 ---@field node Tree
 
----@class DiffMove
----@field type "move"
----@field node Tree
----@field from Directory
-
 ---@class DiffRename
 ---@field type "rename"
+---@field node Tree
 ---@field new_name string
+
+---@class DiffCopy
+---@field type "copy"
+---@field from Tree
+---@field to Tree
+
+---@class DiffMove
+---@field type "move"
+---@field from Tree
+---@field to Tree
 
 local compute_diffs
 ---@param old_tree Tree
@@ -48,7 +49,7 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 			-- with a different name as copies
 			if child.name ~= new_name then
 				if is_copy then
-					table.insert(diffs, { type = "copy", node = child, to = new_child })
+					table.insert(diffs, { type = "copy", from = child, to = new_child })
 					new_tree:remove_child_by_id(id)
 				else
 					table.insert(diffs, { type = "rename", node = child, new_name = new_name })
@@ -66,7 +67,7 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 			table.insert(diffs, { type = "delete", node = child })
 			old_children_to_remove[id] = true
 		else
-			table.insert(diffs, { type = "move", node = child, from = old_id_map[id].nodes[1] })
+			table.insert(diffs, { type = "move", from = old_id_map[id].nodes[1], to = child })
 			new_tree:remove_child_by_id(id)
 		end
 	end
@@ -111,7 +112,7 @@ local verify_trees = function(old_tree, new_tree)
 
 	for new_id, _ in pairs(new_tree:get_recursive_id_map()) do
 		if vim.tbl_isempty(old_id_map[new_id].nodes) then
-			return false, "unknown ID in new tree" .. new_id
+			return false, "unknown ID in new tree"
 		end
 	end
 	return true
