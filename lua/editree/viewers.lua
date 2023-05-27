@@ -1,4 +1,6 @@
 ---@class View
+---@field filetype string the filetype of the original viewer
+---@field syntax_name string the name of the syntax to use for the editree buffer
 ---@field set_on_enter_callback fun(fun)
 ---@field is_file fun(string): boolean
 ---@field is_directory fun(string): boolean
@@ -30,6 +32,7 @@ end
 ---@type View
 local fern = {
 	filetype = "fern",
+	syntax_name = "editree_fern",
 	set_on_enter_callback = function(on_enter)
 		vim.fn["fern#hook#add"]("viewer:ready", function()
 			on_enter()
@@ -48,22 +51,22 @@ local fern = {
 	parse_entry = function(line)
 		return strip_line({ "^|[%-%+]?" }, line)
 	end,
-  format_entry = function(entry)
-
-    if entry:is_root() then
-      return entry.name
-    end
-    local padding = (" "):rep(entry.depth)
-    local symbol
-    if entry.type == "directory" then
-      symbol = vim.tbl_isempty(entry.children) and "|+ " or "|- "
-    elseif entry.type == "file" then
-      symbol = "|  "
-    else
-      assert(false, "Unknown entry type: " .. entry.type)
-    end
-    return padding .. symbol .. entry.name
-  end,
+	format_entry = function(entry)
+		if entry:is_root() then
+			return entry.name
+		end
+		local padding = (" "):rep(entry.depth)
+		local symbol
+		if entry.type == "directory" then
+			symbol = vim.tbl_isempty(entry.children) and vim.g["fern#renderer#default#collapsed_symbol"]
+				or vim.g["fern#renderer#default#expanded_symbol"]
+		elseif entry.type == "file" then
+			symbol = vim.g["fern#renderer#default#leaf_symbol"]
+		else
+			assert(false, "Unknown entry type: " .. entry.type)
+		end
+		return padding .. symbol .. entry.name
+	end,
 	skip_first_line = true,
 	get_root_path = function()
 		local helper = vim.fn["fern#helper#new"]()

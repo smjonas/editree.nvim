@@ -46,8 +46,8 @@ local parse_tree = function(view, lines)
 			end
 		end
 
-    lines[i] = ("/%s %s"):format(id, view.strip_line(line))
-    local name = view.parse_entry(line)
+		lines[i] = ("/%s %s"):format(id, view.strip_line(line))
+		local name = view.parse_entry(line)
 		-- local stripped_line = line:gsub("^%s*(.*)", "%1")
 
 		if view.is_file(name) then
@@ -174,7 +174,7 @@ local apply_diffs = function(root_path, diffs)
 	end)
 end
 
-local ensure_buffer = function(buf_name)
+local ensure_buffer = function(buf_name, syntax_name)
 	if bufnr then
 		return
 	end
@@ -183,15 +183,14 @@ local ensure_buffer = function(buf_name)
 	local winid = vim.api.nvim_get_current_win()
 
 	local buf_opts = {
-		syntax = "editree",
 		filetype = "editree",
 		bufhidden = "wipe",
 		modified = false,
 	}
-	local x = "filetype"
 	for k, v in pairs(buf_opts) do
 		vim.api.nvim_set_option_value(k, v, { buf = bufnr })
 	end
+	vim.api.nvim_set_option_value("syntax", syntax_name, { buf = bufnr })
 
 	local win_opts = {
 		wrap = false,
@@ -213,7 +212,7 @@ end
 ---@return Tree
 function M.init_from_view(view, lines)
 	local root_path = view:get_root_path()
-	ensure_buffer("editree://" .. root_path)
+	ensure_buffer("editree://" .. root_path, view.syntax_name)
 
 	local tree, lines_with_ids = parse_tree(view, lines)
 	vim.api.nvim_set_current_buf(bufnr)
