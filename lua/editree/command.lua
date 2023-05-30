@@ -3,6 +3,7 @@ local M = {}
 local valid_commands = {
 	"open",
 	"close",
+	"toggle",
 }
 
 M.create_commands = function()

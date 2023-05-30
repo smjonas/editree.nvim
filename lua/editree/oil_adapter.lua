@@ -175,7 +175,7 @@ local apply_diffs = function(root_path, diffs)
 end
 
 local ensure_buffer = function(buf_name, syntax_name)
-	if bufnr then
+	if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
 		return
 	end
 	bufnr = vim.api.nvim_create_buf(false, false)
@@ -184,7 +184,7 @@ local ensure_buffer = function(buf_name, syntax_name)
 
 	local buf_opts = {
 		filetype = "editree",
-		bufhidden = "wipe",
+		bufhidden = "hide",
 		modified = false,
 	}
 	for k, v in pairs(buf_opts) do

@@ -12,8 +12,12 @@ local adapter
 local viewers
 
 local group = vim.api.nvim_create_augroup("editree", {})
+local initialized = false
 
----Initializes editree from the current buffer.
+--- The number of the buffer editree was opened from
+local prev_buffer
+
+---Initializes editree for the current buffer
 M.open = function()
 	local filetype = vim.bo["filetype"]
 	local viewer = viewers[filetype]
@@ -22,29 +26,28 @@ M.open = function()
 		return
 	end
 
-	viewer.set_on_enter_callback(function()
-		adapter.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false))
-	end)
+	adapter.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false))
+	prev_buffer = vim.api.nvim_get_current_buf()
+	initialized = true
 end
 
 M.close = function()
-  adapter.close()
+	if initialized and vim.api.nvim_buf_is_valid(prev_buffer) then
+		vim.cmd.buf(prev_buffer)
+	end
+	initialized = false
 end
 
-local setup_autocmds = function()
-	viewers = require("editree.viewers")
-	local filetypes = vim.iter(require("editree.viewers"))
-		:map(function(_, viewer)
-			return viewer.filetype
-		end)
-		:totable()
+M.toggle = function()
+	if initialized then
+		M.close()
+	else
+		M.open()
+	end
+end
 
-	vim.api.nvim_create_autocmd("FileType", {
-		group = group,
-		pattern = filetypes,
-		callback = M.open,
-		desc = "Open editree for supported filetypes",
-	})
+M.is_initialized = function()
+	return initialized
 end
 
 M.setup = function()
@@ -54,8 +57,8 @@ M.setup = function()
 		return
 	end
 	adapter = require("editree.oil_adapter")
-	setup_autocmds()
-  require("editree.command").create_commands()
+	viewers = require("editree.viewers")
+	require("editree.command").create_commands()
 end
 
 return M
