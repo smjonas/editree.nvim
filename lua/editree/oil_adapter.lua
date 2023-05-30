@@ -20,7 +20,7 @@ local bufnr
 ---@param lines string[] is modified by this function (with IDs prepended)
 ---@return Tree tree, string[] updated_lines the constructed tree, the updated lines with IDs added at the beginning of each node
 local parse_tree = function(view, lines)
-	lines[1] = view.strip_line(lines[1])
+	lines[1] = view.read_line(lines[1])
 	local tree = require("editree.tree").new(lines[1])
 	local cur_dir = tree
 	local last_seen_dir_at_depth = { [-1] = cur_dir }
@@ -31,7 +31,7 @@ local parse_tree = function(view, lines)
 	dir_stack:push(cur_dir)
 
 	for i = 2, #lines do
-		local line = lines[i]
+		local line = view.read_line(lines[i])
 		local id = id_generator.get_id()
 
 		-- Count number of leading whitespaces
@@ -46,9 +46,8 @@ local parse_tree = function(view, lines)
 			end
 		end
 
-		lines[i] = ("/%s %s"):format(id, view.strip_line(line))
+		lines[i] = ("/%s %s"):format(id, line)
 		local name = view.parse_entry(line)
-		-- local stripped_line = line:gsub("^%s*(.*)", "%1")
 
 		if view.is_file(name) then
 			dir_stack:top():add_file(name, id)
@@ -75,11 +74,10 @@ local parse_tree_with_ids = function(view, lines)
 	-- Remove blank lines
 	lines = vim.iter(lines)
 		:filter(function(line)
-			return line:find("^%s*$")
+			return not line:find("^%s*$")
 		end)
 		:totable()
 
-	-- lines[1] = view:strip_line(lines[1])
 	local tree = require("editree.tree").new(lines[1])
 	local cur_dir = tree
 	local last_seen_dir_at_depth = { [-1] = cur_dir }
@@ -115,14 +113,12 @@ local parse_tree_with_ids = function(view, lines)
 			end
 		end
 
-		-- Remove leading whitespaces and other patterns
-		line = line:gsub("^%s*", "")
-		-- line = view:strip_line(line)
+		local name = view.parse_entry(line)
 
-		if view.is_file(line) then
-			dir_stack:top():add_file(line, id)
-		elseif view.is_directory(line) then
-			local dir = last_seen_dir_at_depth[cur_depth]:add_dir(line, id)
+		if view.is_file(name) then
+			dir_stack:top():add_file(name, id)
+		elseif view.is_directory(name) then
+			local dir = last_seen_dir_at_depth[cur_depth]:add_dir(name, id)
 			if depth > cur_depth then
 				-- Moving down in the tree
 				last_seen_dir_at_depth[depth] = cur_dir
@@ -241,6 +237,7 @@ function M.init_from_view(view, lines)
 		callback = function()
 			local updated_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 			local ok, modified_tree = parse_tree_with_ids(view, updated_lines)
+			vim.print("NEW TREE " .. vim.inspect(modified_tree))
 			if not ok then
 				print("Found unexpected ID")
 				return
@@ -251,8 +248,7 @@ function M.init_from_view(view, lines)
 			ok, diff = require("editree.diff").compute(tree:clone(), modified_tree:clone())
 			if ok then
 				apply_diffs(root_path, diff)
-				vim.print(tree, modified_tree)
-				vim.print(diffs)
+				-- vim.print(tree, modified_tree)
 			else
 				print(diff)
 			end

@@ -18,17 +18,6 @@ local strip_line = function(strip_patterns, line)
 	return line
 end
 
--- local View = {
--- 	---@param view View
--- 	---@param line string
--- 	strip_line = function(strip_patterns, line)
--- 		for _, pattern in ipairs(strip_patterns) do
--- 			line = line:gsub(pattern, "")
--- 		end
--- 		return line
--- 	end,
--- }
-
 ---@type View
 local fern = {
 	filetype = "fern",
@@ -44,12 +33,11 @@ local fern = {
 	is_directory = function(dir)
 		return dir:match("/$")
 	end,
-	-- strip_patterns = { "^%s*|[%-%+]?", "$" },
-	strip_line = function(line)
+	read_line = function(line)
 		return line:gsub("$", "")
 	end,
 	parse_entry = function(line)
-		return strip_line({ "^|[%-%+]?" }, line)
+		return strip_line({ "^%s+", "^|[%-%+]?" }, line)
 	end,
 	format_entry = function(entry)
 		if entry:is_root() then
