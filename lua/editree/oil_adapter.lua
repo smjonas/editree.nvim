@@ -13,6 +13,8 @@ local stack = require("editree.stack")
 local oil_mutator = require("oil.mutator")
 local oil_preview = require("oil.mutator.preview")
 
+local unpack = table.unpack or unpack
+
 ---@type integer
 local bufnr
 
@@ -26,7 +28,7 @@ local parse_tree = function(view, lines)
 	local last_seen_dir_at_depth = { [-1] = cur_dir }
 	local cur_depth = -1
 
-	id_generator.set_max_num_ids(#lines - 1)
+	id_generator.max_num_ids = #lines - 1
 	local dir_stack = stack.new()
 	dir_stack:push(cur_dir)
 
@@ -194,7 +196,6 @@ local ensure_buffer = function(buf_name, syntax_name)
 
 	local win_opts = {
 		wrap = false,
-		signcolumn = "no",
 		cursorcolumn = false,
 		foldcolumn = "0",
 		spell = false,
@@ -206,17 +207,27 @@ local ensure_buffer = function(buf_name, syntax_name)
 		vim.api.nvim_set_option_value(k, v, { win = winid })
 	end
 end
+
+local get_first_letter_col = function(line)
+	local start_pos, _ = line:find("%a")
+	return start_pos - 1 or 0
+end
+
 --- Parses the buffer lines given the active view.
 ---@param view View
 ---@param lines string[]
 ---@return Tree
 function M.init_from_view(view, lines)
 	local root_path = view:get_root_path()
+	local cursor_row = vim.api.nvim_win_get_cursor(0)[1]
 	ensure_buffer("editree://" .. root_path, view.syntax_name)
 
 	local tree, lines_with_ids = parse_tree(view, lines)
 	vim.api.nvim_set_current_buf(bufnr)
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines_with_ids)
+
+	-- Inherit the cursor position from the viewer
+	vim.api.nvim_win_set_cursor(0, { cursor_row, get_first_letter_col(lines[cursor_row]) })
 	vim.bo[bufnr].modified = false
 
 	vim.api.nvim_create_autocmd("BufWriteCmd", {

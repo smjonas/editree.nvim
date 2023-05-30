@@ -1,12 +1,8 @@
 local M = {}
 
 local cur_id = 1
-local max_num_ids
-
----@param max_num_ids_ integer #the maximum number of IDs to generate
-M.set_max_num_ids = function(max_num_ids_)
-	max_num_ids = max_num_ids_
-end
+---@type integer #the maximum number of IDs to generate
+M.max_num_ids = nil
 
 ---@param id integer
 ---@param max_id integer
@@ -20,8 +16,8 @@ end
 ---Generates a new unique ID in ascending order
 ---@return string
 M.get_id = function()
-  assert(max_num_ids, "max_num_ids not set")
-	local id = format_id(cur_id, max_num_ids)
+	assert(M.max_num_ids, "max_num_ids not set")
+	local id = format_id(cur_id, M.max_num_ids)
 	cur_id = cur_id + 1
 	return id
 end

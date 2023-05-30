@@ -16,6 +16,8 @@ local M = {}
 ---@class File : Tree
 ---@field type "file"
 
+local unpack = table.unpack or unpack
+
 ---@param name string
 ---@param id string?
 ---@param type "directory" | "file" | nil
