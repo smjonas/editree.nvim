@@ -13,8 +13,6 @@ local stack = require("editree.stack")
 local oil_mutator = require("oil.mutator")
 local oil_preview = require("oil.mutator.preview")
 
-local unpack = table.unpack or unpack
-
 ---@type integer
 local bufnr
 
@@ -177,9 +175,17 @@ local apply_diffs = function(root_path, diffs)
 end
 
 local ensure_buffer = function(buf_name, syntax_name)
+	local bufs = vim.api.nvim_list_bufs()
+	-- Check for an existing editree buffer
+	for _, buf in ipairs(bufs) do
+		if vim.api.nvim_buf_get_name(buf) == buf_name then
+			vim.api.nvim_buf_delete(buf, { force = true })
+		end
+	end
 	if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
 		return
 	end
+
 	bufnr = vim.api.nvim_create_buf(false, false)
 	vim.api.nvim_buf_set_name(bufnr, buf_name)
 	local winid = vim.api.nvim_get_current_win()
@@ -245,6 +251,8 @@ function M.init_from_view(view, lines)
 			ok, diff = require("editree.diff").compute(tree:clone(), modified_tree:clone())
 			if ok then
 				apply_diffs(root_path, diff)
+				vim.print(tree, modified_tree)
+				vim.print(diffs)
 			else
 				print(diff)
 			end
