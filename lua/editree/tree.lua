@@ -27,7 +27,8 @@ function M.new(name, id, type)
 	return setmetatable(self, {
 		__index = M,
 		__tostring = function()
-			return M.to_string(self, 0)
+			-- Remove last "\n"
+			return M.to_string(self, 0):sub(1, -2)
 		end,
 	})
 end
@@ -43,7 +44,7 @@ function M:add_dir(name, id)
 	assert(self.type == "directory")
 	local dir = M.new(name, id, "directory")
 	dir.parent = self
-  dir.depth = self.depth + 1
+	dir.depth = self.depth + 1
 	table.insert(self.children, dir)
 	return dir
 end
@@ -55,7 +56,7 @@ function M:add_file(name, id)
 	assert(self.type == "directory", "attempting to add file to non-directory")
 	local file = M.new(name, id, "file")
 	file.parent = self
-  file.depth = self.depth + 1
+	file.depth = self.depth + 1
 	table.insert(self.children, file)
 	return file
 end
@@ -146,12 +147,13 @@ function M:contains_unique_names()
 	return true
 end
 
+---Visits each node in the tree in a breadth-first manner and calls fn on every matching node.
 ---@param self Directory
 ---@param type "directory" | "file" | nil
 ---@param fn fun(Tree)
 function M:for_each(fn, type)
 	assert(self.type == "directory")
-	if type == nil or self.type == type then
+	if self:is_root() and (type == nil or self.type == type) then
 		fn(self)
 	end
 	for _, child in ipairs(self.children) do
@@ -167,7 +169,8 @@ end
 ---@param depth integer
 function M:to_string(depth)
 	local is_dir = self.type == "directory"
-	local result = ("%s%s%s\n"):format((" "):rep(depth), self.id and self.id .. "/ " or "", self.name, "\n")
+	local id = (self.id and self.id .. "/ " or "") or ""
+	local result = ("%s%s%s\n"):format((" "):rep(depth), id, self.name, "\n")
 
 	if is_dir then
 		for _, child in ipairs(self.children) do

@@ -15,9 +15,6 @@ local remove_parents = function(diffs)
 		if diff_.node then
 			remove_from_tree(diff_.node)
 		end
-		if diff_.from then
-			remove_from_tree(diff_.from)
-		end
 		if diff_.to then
 			remove_from_tree(diff_.to)
 		end
@@ -96,7 +93,7 @@ describe("diff", function()
 		-- Has the same ID as the existing file
 		local to = new:add_file("file2.txt", "001")
 
-		local expected = { { type = "copy", from = from, to = to } }
+		local expected = { { type = "copy", node = from, to = to } }
 		local _, actual = diff.compute(old, new)
 		assert.diffs_equal(expected, actual)
 	end)
@@ -110,7 +107,7 @@ describe("diff", function()
 		new:add_dir("child1", "001")
 		local to = new:add_dir("child2", "003"):add_file("file1.txt", "002")
 
-		local expected = { { type = "move", from = from:clone(), to = to } }
+		local expected = { { type = "move", node = from:clone(), to = to } }
 		local _, actual = diff.compute(old, new)
 		assert.diffs_equal(expected, actual)
 	end)

@@ -1,6 +1,6 @@
 local M = {}
 
----@alias Diff DiffCreate | DiffDelete | DiffRename | DiffCopy | DiffMove
+---@alias editree.Diff DiffCreate | DiffDelete | DiffRename | DiffCopy | DiffMove
 
 ---@class DiffCreate
 ---@field type "create"
@@ -17,18 +17,18 @@ local M = {}
 
 ---@class DiffCopy
 ---@field type "copy"
----@field from Tree
+---@field node Tree
 ---@field to Tree
 
 ---@class DiffMove
 ---@field type "move"
----@field from Tree
+---@field node Tree
 ---@field to Tree
 
 local compute_diffs
 ---@param old_tree Tree
 ---@param new_tree Tree
----@param diffs table<Diff>
+---@param diffs table<editree.Diff>
 compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 	assert(old_tree.type == "directory" and new_tree.type == "directory")
 
@@ -49,7 +49,7 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 			-- with a different name as copies
 			if child.name ~= new_name then
 				if is_copy then
-					table.insert(diffs, { type = "copy", from = child, to = new_child })
+					table.insert(diffs, { type = "copy", node = child, to = new_child })
 					new_tree:remove_child_by_id(id)
 				else
 					table.insert(diffs, { type = "rename", node = child, new_name = new_name })
@@ -67,7 +67,7 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 			table.insert(diffs, { type = "delete", node = child })
 			old_children_to_remove[id] = true
 		else
-			table.insert(diffs, { type = "move", from = old_id_map[id].nodes[1], to = child })
+			table.insert(diffs, { type = "move", node = old_id_map[id].nodes[1], to = child })
 			new_tree:remove_child_by_id(id)
 		end
 	end
@@ -76,7 +76,7 @@ end
 
 ---@param old_tree Tree
 ---@param new_tree Tree
----@param diffs table<Diff>
+---@param diffs table<editree.Diff>
 local compute_inserts = function(old_tree, new_tree, diffs)
 	local old_id_map = old_tree:get_recursive_id_map()
 	local new_id_map = new_tree:get_recursive_id_map()

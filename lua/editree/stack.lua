@@ -5,15 +5,16 @@ function M:push(value)
 end
 
 function M:top()
-  local value = self[#self]
-  assert(value, "stack is empty")
+	local value = self[#self]
+	assert(value, "stack is empty")
 	return value
 end
 
 function M:pop()
-  local value = self[#self]
-  assert(value, "attempting to pop empty stack")
+	local value = self[#self]
+	assert(value, "attempting to pop empty stack")
 	table.remove(self, #self)
+	return value
 end
 
 function M.new()

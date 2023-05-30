@@ -9,10 +9,10 @@
 ---@field skip_first_line boolean
 ---@field get_root_path fun(): string
 
----@param strip_patterns string[]
+---@param patterns string[]
 ---@param line string
-local strip_line = function(strip_patterns, line)
-	for _, pattern in ipairs(strip_patterns) do
+local strip_patterns = function(patterns, line)
+	for _, pattern in ipairs(patterns) do
 		line = line:gsub(pattern, "")
 	end
 	return line
@@ -37,7 +37,7 @@ local fern = {
 		return line:gsub("$", "")
 	end,
 	parse_entry = function(line)
-		return strip_line({ "^%s+", "^|[%-%+]?" }, line)
+		return strip_patterns({ "^%s*|[-+]?%s*" }, line)
 	end,
 	format_entry = function(entry)
 		if entry:is_root() then
