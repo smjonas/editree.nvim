@@ -23,9 +23,10 @@ M._build_tree = function(view, lines, transform_line)
 	dir_stack:push(cur_dir)
 	local cur_depth = -1
 
+  print("READ ")
 	for i = 2, #lines do
-		local line = view.read_line(lines[i])
-		line = not transform_line and line or transform_line(line)
+		lines[i] = view.read_line(lines[i])
+		local line = not transform_line and lines[i] or transform_line(lines[i])
 		if line == false then
 			return false, nil
 		end
@@ -47,7 +48,6 @@ M._build_tree = function(view, lines, transform_line)
 			local new_node = view.is_file(name) and parent_dir:add_file(name) or parent_dir:add_dir(name)
 			-- Replace the top
 			dir_stack[#dir_stack] = new_node
-			print(tree)
 		elseif depth > cur_depth then -- Moving down in the tree
 			local child_node = view.is_file(name) and cur_dir:add_file(name) or cur_dir:add_dir(name)
 			dir_stack:push(child_node)
@@ -83,6 +83,24 @@ local parse_tree_with_ids = function(view, lines)
 		return line
 	end)
 	return ok, tree
+end
+
+---Adds IDs to each node in the tree as well as at the beginning of each line.
+local prepend_ids = function(tree, lines)
+	-- No ID for the root node
+	id_generator.max_num_ids = #lines - 1
+
+	local i = 2
+	tree:for_each(function(node)
+		if not node:is_root() then
+			local id = id_generator.get_id()
+			node.id = id
+			lines[i] = ("/%s %s"):format(id, lines[i])
+			i = i + 1
+		end
+	end)
+	assert(i - 1 == #lines, "Number of IDs does not match number of lines")
+	return lines
 end
 
 ---@param diff 0
@@ -170,40 +188,16 @@ local get_first_letter_col = function(line)
 	return start_pos - 1 or 0
 end
 
----Adds IDs to each node in the tree as well as at the beginning of each line.
-local prepend_ids = function(tree, lines)
-	-- No ID for the root node
-	id_generator.max_num_ids = #lines - 1
-
-	local i = 2
-	tree:for_each(function(node)
-		if not node:is_root() then
-			local id = id_generator.get_id()
-			node.id = id
-			lines[i] = ("/%s %s"):format(id, lines[i])
-			i = i + 1
-		end
-	end)
-	assert(i - 1 == #lines, "Number of IDs does not match number of lines")
-	return lines
-end
-
 --- Parses the buffer lines given the active view.
 ---@param view View
 ---@param lines string[]
 ---@return Tree
 function M.init_from_view(view, lines)
-	if true then
-		print(view.parse_entry("|  test.txt"))
-		-- return
-	end
-
 	local root_path = view:get_root_path()
 	local cursor_row = vim.api.nvim_win_get_cursor(0)[1]
 	ensure_buffer("editree://" .. root_path, view.syntax_name)
 
 	local _, tree = M._build_tree(view, lines)
-	print(tree)
 	local lines_with_ids = prepend_ids(tree, lines)
 
 	vim.api.nvim_set_current_buf(bufnr)
