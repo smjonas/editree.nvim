@@ -4,30 +4,30 @@ local M = {}
 
 ---@class DiffCreate
 ---@field type "create"
----@field node Tree
+---@field node editree.Tree
 
 ---@class DiffDelete
 ---@field type "delete"
----@field node Tree
+---@field node editree.Tree
 
 ---@class DiffRename
 ---@field type "rename"
----@field node Tree
+---@field node editree.Tree
 ---@field new_name string
 
 ---@class DiffCopy
 ---@field type "copy"
----@field node Tree
----@field to Tree
+---@field node editree.Tree
+---@field to editree.Tree
 
 ---@class DiffMove
 ---@field type "move"
----@field node Tree
----@field to Tree
+---@field node editree.Tree
+---@field to editree.Tree
 
 local compute_diffs
----@param old_tree Tree
----@param new_tree Tree
+---@param old_tree editree.Tree
+---@param new_tree editree.Tree
 ---@param diffs table<editree.Diff>
 compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 	assert(old_tree.type == "directory" and new_tree.type == "directory")
@@ -74,8 +74,8 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 	old_tree:remove_children_by_ids(old_children_to_remove)
 end
 
----@param old_tree Tree
----@param new_tree Tree
+---@param old_tree editree.Tree
+---@param new_tree editree.Tree
 ---@param diffs table<editree.Diff>
 local compute_inserts = function(old_tree, new_tree, diffs)
 	local old_id_map = old_tree:get_recursive_id_map()
@@ -94,8 +94,8 @@ local compute_inserts = function(old_tree, new_tree, diffs)
 	end)
 end
 
----@param old_tree Tree
----@param new_tree Tree
+---@param old_tree editree.Tree
+---@param new_tree editree.Tree
 ---@return boolean success, string? error
 local verify_trees = function(old_tree, new_tree)
 	local ok = true
@@ -118,8 +118,8 @@ local verify_trees = function(old_tree, new_tree)
 	return true
 end
 
----@param old_tree Tree
----@param new_tree Tree
+---@param old_tree editree.Tree
+---@param new_tree editree.Tree
 ---@return boolean success, any
 M.compute = function(old_tree, new_tree)
 	local diffs = {}

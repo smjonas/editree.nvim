@@ -1,19 +1,19 @@
----@type Tree
+---@type editree.Tree
 local M = {}
 
----@class Tree
+---@class editree.Tree
 ---@field type string
 ---@field name string
 ---@field id string
----@field parent Tree?
+---@field parent editree.Tree?
 ---@field depth integer
----@field id_to_child_map fun(): table<string, Tree>
+---@field id_to_child_map fun(): table<string, editree.Tree>
 
----@class Directory : Tree
+---@class Directory : editree.Tree
 ---@field type "directory"
----@field children Tree[]
+---@field children editree.Tree[]
 
----@class File : Tree
+---@class File : editree.Tree
 ---@field type "file"
 
 local unpack = table.unpack or unpack
@@ -74,7 +74,7 @@ function M:get_rel_path()
 	return vim.fs.joinpath((table.unpack or unpack)(parts))
 end
 
----@return table<string, Tree>
+---@return table<string, editree.Tree>
 function M:id_to_child_map()
 	assert(self.type == "directory", "attempting to get child of non-directory")
 	local map = {}
@@ -86,7 +86,7 @@ end
 
 ---@param self Directory
 ---@param id string
----@return Tree? child #the removed child if it could be removed or nil if the child with the given ID did not exist
+---@return editree.Tree? child #the removed child if it could be removed or nil if the child with the given ID did not exist
 function M:remove_child_by_id(id)
 	assert(self.type == "directory")
 	local idx = -1
@@ -114,7 +114,7 @@ end
 
 ---Returns a map mapping from the ID to a list of nodes with that ID.
 ---@param self Directory
----@param id_map table<string, list<Tree>>?
+---@param id_map table<string, list<editree.Tree>>?
 ---@return boolean
 function M:get_recursive_id_map(id_map)
 	assert(self.type == "directory")
@@ -150,7 +150,7 @@ end
 ---Visits each node in the tree in a breadth-first manner and calls fn on every matching node.
 ---@param self Directory
 ---@param type "directory" | "file" | nil
----@param fn fun(Tree)
+---@param fn fun(editree.Tree)
 function M:for_each(fn, type)
 	assert(self.type == "directory")
 	if self:is_root() and (type == nil or self.type == type) then

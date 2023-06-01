@@ -1,9 +1,7 @@
 -- The oil adapter is responsible for parsing a tree view representation provided
 -- by a supported file browser (e.g. nvim-tree) into a list of nodes (i.e. directories
--- or files). The node structures are used to determine the modifications applied
--- to the root directory.
-
--- Insert enter: init from view
+-- or files). The node structure is used to determine the modifications applied to
+-- the root directory.
 
 ---@class OilAdapter
 local M = {}
@@ -23,7 +21,6 @@ M._build_tree = function(view, lines, transform_line)
 	dir_stack:push(cur_dir)
 	local cur_depth = -1
 
-  print("READ ")
 	for i = 2, #lines do
 		lines[i] = view.read_line(lines[i])
 		local line = not transform_line and lines[i] or transform_line(lines[i])
@@ -59,7 +56,7 @@ end
 
 ---@param view View
 ---@param lines string[]
----@return boolean success, Tree? tree
+---@return boolean success, editree.Tree? tree
 local parse_tree_with_ids = function(view, lines)
 	-- Remove blank lines
 	lines = vim.iter(lines)
@@ -191,7 +188,7 @@ end
 --- Parses the buffer lines given the active view.
 ---@param view View
 ---@param lines string[]
----@return Tree
+---@return editree.Tree
 function M.init_from_view(view, lines)
 	local root_path = view:get_root_path()
 	local cursor_row = vim.api.nvim_win_get_cursor(0)[1]
@@ -212,12 +209,12 @@ function M.init_from_view(view, lines)
 		callback = function()
 			local updated_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 			local ok, modified_tree = parse_tree_with_ids(view, updated_lines)
-			vim.print("NEW TREE " .. print(modified_tree))
 			if not ok then
 				print("Found unexpected ID")
 				return
 			end
-			assert(modified_tree)
+      vim.print("NEW TREE " .. vim.inspect(modified_tree))
+      print(modified_tree)
 			local diff
 			-- Need to clone because computing the diff modifies the input trees
 			ok, diff = require("editree.diff").compute(tree:clone(), modified_tree:clone())
