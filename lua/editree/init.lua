@@ -26,8 +26,8 @@ M.open = function()
 		return
 	end
 
-  prev_buffer = vim.api.nvim_get_current_buf()
-	adapter.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false))
+	prev_buffer = vim.api.nvim_get_current_buf()
+	adapter.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false), M.close)
 	initialized = true
 end
 

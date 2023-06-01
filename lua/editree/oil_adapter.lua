@@ -73,7 +73,6 @@ M._parse_tree_with_ids = function(view, lines)
 		:totable()
 
 	local max_id = #lines
-
 	local ok, tree = M._build_tree(view, lines, function(line)
 		local _, _, id = line:find("^/(%d+) ")
 		if id then
@@ -113,7 +112,7 @@ end
 local diff_to_action = function(root_path, diff)
 	local url = get_oil_url(root_path, diff.node:get_rel_path())
 	local entry_type = diff.node.type
-	local action = { type = diff.type, entry_type = entry_type }
+	local action = { type = diff.type, entry_type = entry_type, url = url }
 
 	-- Oil only knows "move" actions
 	if diff.type == "rename" then
@@ -127,19 +126,10 @@ local diff_to_action = function(root_path, diff)
 	return action
 end
 
-local apply_diffs = function(root_path, diffs)
+local apply_diffs = function(root_path, diffs, return_to_view_cb)
 	local actions = vim.tbl_map(function(diff)
 		return diff_to_action(root_path, diff)
 	end, diffs)
-	-- vim.print(actions)
-	-- actions = {
-	-- 	{
-	-- 		type = "create",
-	-- 		entry_type = "file",
-	-- 		url = "oil:///home/jonas/.config/nvim/lua/plugins/new.txt",
-	-- 	},
-	-- }
-
 	require("oil.mutator.preview").show(actions, true, function(confirmed)
 		if confirmed then
 			require("oil.mutator").process_actions(
@@ -147,8 +137,9 @@ local apply_diffs = function(root_path, diffs)
 				vim.schedule_wrap(function(err)
 					if err then
 						vim.notify(string.format("[editree] Error applying actions: %s", err), vim.log.levels.ERROR)
+					else
+						return_to_view_cb()
 					end
-					print("TODO: rerender")
 				end)
 			)
 		end
@@ -203,8 +194,9 @@ end
 --- Parses the buffer lines given the active view.
 ---@param view View
 ---@param lines string[]
+---@param return_to_view_cb: fun
 ---@return editree.Tree
-function M.init_from_view(view, lines)
+function M.init_from_view(view, lines, return_to_view_cb)
 	local root_path = view:get_root_path()
 	local cursor_row = vim.api.nvim_win_get_cursor(0)[1]
 	ensure_buffer("editree://" .. root_path, view.syntax_name)
@@ -232,7 +224,7 @@ function M.init_from_view(view, lines)
 			-- Need to clone because computing the diff modifies the input trees
 			ok, diffs = require("editree.diff").compute(tree:clone(), modified_tree)
 			if ok then
-				apply_diffs(root_path, diffs)
+				apply_diffs(root_path, diffs, return_to_view_cb)
 			else
 				print(diffs)
 			end
