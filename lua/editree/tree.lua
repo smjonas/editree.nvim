@@ -105,11 +105,9 @@ end
 ---@param ids_to_remove string[]
 function M:remove_children_by_ids(ids_to_remove)
 	assert(self.type == "directory")
-	self.children = vim.iter(self.children)
-		:filter(function(child)
-			return not ids_to_remove[child.id]
-		end)
-		:totable()
+	self.children = vim.tbl_filter(function(child)
+		return not ids_to_remove[child.id]
+	end, self.children)
 end
 
 ---Returns a map mapping from the ID to a list of nodes with that ID.
@@ -170,7 +168,7 @@ end
 function M:to_string(depth)
 	local is_dir = self.type == "directory"
 	local id = (self.id and self.id .. "/ " or "") or ""
-	local result = ("%s%s%s\n"):format((" "):rep(depth), id, self.name, "\n")
+	local result = ("%s%s%s\n"):format(id, (" "):rep(depth), self.name, "\n")
 
 	if is_dir then
 		for _, child in ipairs(self.children) do

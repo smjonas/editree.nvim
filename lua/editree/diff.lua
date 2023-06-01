@@ -13,7 +13,7 @@ local M = {}
 ---@class DiffRename
 ---@field type "rename"
 ---@field node editree.Tree
----@field new_name string
+---@field to editree.Tree
 
 ---@class DiffCopy
 ---@field type "copy"
@@ -48,13 +48,8 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 			-- If there are more copies of the file than before, only mark files
 			-- with a different name as copies
 			if child.name ~= new_name then
-				if is_copy then
-					table.insert(diffs, { type = "copy", node = child, to = new_child })
-					new_tree:remove_child_by_id(id)
-				else
-					table.insert(diffs, { type = "rename", node = child, new_name = new_name })
-					new_tree:remove_child_by_id(id)
-				end
+				table.insert(diffs, { type = is_copy and "copy" or "rename", node = child, to = new_child })
+				new_tree:remove_child_by_id(id)
 			end
 			if child.type == "directory" and new_child.type == "directory" then
 				compute_diffs(child, old_id_map, new_child, new_id_map, diffs)
@@ -122,12 +117,12 @@ end
 ---@param new_tree editree.Tree
 ---@return boolean success, any
 M.compute = function(old_tree, new_tree)
-	local diffs = {}
-
 	local ok, err = verify_trees(old_tree, new_tree)
 	if not ok then
 		return false, err
 	end
+
+	local diffs = {}
 	compute_diffs(old_tree, old_tree:get_recursive_id_map(), new_tree, new_tree:get_recursive_id_map(), diffs)
 	compute_inserts(old_tree, new_tree, diffs)
 	return true, diffs
@@ -140,5 +135,3 @@ return M
 ---@field url string
 ---@field entry_type oil.EntryType
 ---@field link nil|string
-
-

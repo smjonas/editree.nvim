@@ -12,7 +12,7 @@ local stack = require("editree.stack")
 ---@type integer
 local bufnr
 
-M._build_tree = function(view, lines, transform_line)
+M._build_tree = function(view, lines, extract_id)
 	lines[1] = view.read_line(lines[1])
 	local tree = require("editree.tree").new(lines[1])
 	local dir_stack = stack.new()
@@ -22,11 +22,18 @@ M._build_tree = function(view, lines, transform_line)
 	local cur_depth = -1
 
 	for i = 2, #lines do
-		lines[i] = view.read_line(lines[i])
-		local line = not transform_line and lines[i] or transform_line(lines[i])
-		if line == false then
-			return false, nil
+		local line = view.read_line(lines[i])
+		local id
+		if extract_id then
+			id = extract_id(line)
+			if id == false then
+				return false, nil
+			elseif id ~= nil then
+				-- Remove leading ID from line
+				line = line:sub(#id + 3)
+			end
 		end
+		lines[i] = line
 
 		-- Count number of leading whitespaces
 		local depth = #line:gsub("^(%s*).*", "%1")
@@ -42,11 +49,11 @@ M._build_tree = function(view, lines, transform_line)
 
 		if depth == cur_depth then
 			local parent_dir = cur_dir.parent
-			local new_node = view.is_file(name) and parent_dir:add_file(name) or parent_dir:add_dir(name)
+			local new_node = view.is_file(name) and parent_dir:add_file(name, id) or parent_dir:add_dir(name, id)
 			-- Replace the top
 			dir_stack[#dir_stack] = new_node
 		elseif depth > cur_depth then -- Moving down in the tree
-			local child_node = view.is_file(name) and cur_dir:add_file(name) or cur_dir:add_dir(name)
+			local child_node = view.is_file(name) and cur_dir:add_file(name, id) or cur_dir:add_dir(name, id)
 			dir_stack:push(child_node)
 		end
 		cur_depth = depth
@@ -57,7 +64,7 @@ end
 ---@param view View
 ---@param lines string[]
 ---@return boolean success, editree.Tree? tree
-local parse_tree_with_ids = function(view, lines)
+M._parse_tree_with_ids = function(view, lines)
 	-- Remove blank lines
 	lines = vim.iter(lines)
 		:filter(function(line)
@@ -74,10 +81,8 @@ local parse_tree_with_ids = function(view, lines)
 				-- Unexpected ID
 				return false
 			end
-			-- Remove leading ID
-			line = line:sub(#id + 3)
 		end
-		return line
+		return id
 	end)
 	return ok, tree
 end
@@ -100,23 +105,33 @@ local prepend_ids = function(tree, lines)
 	return lines
 end
 
----@param diff 0
+local get_oil_url = function(root_path, rel_path)
+	return ("oil://%s"):format(vim.fs.joinpath(root_path, rel_path))
+end
+
+---@param diff editree.Diff
 local diff_to_action = function(root_path, diff)
-	if not diff.node then
-		vim.print(diff)
-	end
-	local url = ("oil://%s"):format(vim.fs.joinpath(root_path, diff.node:get_rel_path()))
+	local url = get_oil_url(root_path, diff.node:get_rel_path())
 	local entry_type = diff.node.type
-	-- if diff.type == "create" then
-	return { type = "create", url = url, entry_type = entry_type }
-	-- end
+	local action = { type = diff.type, entry_type = entry_type }
+
+	-- Oil only knows "move" actions
+	if diff.type == "rename" then
+		action.type = "move"
+	end
+
+	if action.type == "move" then
+		action.src_url = url
+		action.dest_url = get_oil_url(root_path, diff.to:get_rel_path())
+	end
+	return action
 end
 
 local apply_diffs = function(root_path, diffs)
 	local actions = vim.tbl_map(function(diff)
 		return diff_to_action(root_path, diff)
 	end, diffs)
-	vim.print(actions)
+	-- vim.print(actions)
 	-- actions = {
 	-- 	{
 	-- 		type = "create",
@@ -208,21 +223,18 @@ function M.init_from_view(view, lines)
 		pattern = "editree://*",
 		callback = function()
 			local updated_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-			local ok, modified_tree = parse_tree_with_ids(view, updated_lines)
+			local ok, modified_tree = M._parse_tree_with_ids(view, updated_lines)
 			if not ok then
 				print("Found unexpected ID")
 				return
 			end
-      vim.print("NEW TREE " .. vim.inspect(modified_tree))
-      print(modified_tree)
-			local diff
+			local diffs
 			-- Need to clone because computing the diff modifies the input trees
-			ok, diff = require("editree.diff").compute(tree:clone(), modified_tree:clone())
+			ok, diffs = require("editree.diff").compute(tree:clone(), modified_tree)
 			if ok then
-				apply_diffs(root_path, diff)
-				-- vim.print(tree, modified_tree)
+				apply_diffs(root_path, diffs)
 			else
-				print(diff)
+				print(diffs)
 			end
 		end,
 		desc = "Write editree buffer",
