@@ -11,9 +11,10 @@ local stack = require("editree.stack")
 
 ---@type integer
 local bufnr
+local augroup = vim.api.nvim_create_augroup("editree", {})
 
 M._build_tree = function(view, lines, extract_id)
-	lines[1] = view.read_line(lines[1])
+	lines[1] = view.read_root_line and view.read_root_line(lines[1]) or view.read_line(lines[1])
 	local tree = require("editree.tree").new(lines[1])
 	local dir_stack = stack.new()
 
@@ -194,8 +195,7 @@ end
 --- Parses the buffer lines given the active view.
 ---@param view View
 ---@param lines string[]
----@param return_to_view_cb: fun
----@return editree.Tree
+---@param return_to_view_cb fun()
 function M.init_from_view(view, lines, return_to_view_cb)
 	local root_path = view:get_root_path()
 	local cursor_row = vim.api.nvim_win_get_cursor(0)[1]
@@ -213,6 +213,7 @@ function M.init_from_view(view, lines, return_to_view_cb)
 
 	vim.api.nvim_create_autocmd("BufWriteCmd", {
 		pattern = "editree://*",
+		group = augroup,
 		callback = function()
 			local updated_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 			local ok, modified_tree = M._parse_tree_with_ids(view, updated_lines)
@@ -231,7 +232,6 @@ function M.init_from_view(view, lines, return_to_view_cb)
 		end,
 		desc = "Write editree buffer",
 	})
-	return tree
 end
 
 -- ---@type augroup integer

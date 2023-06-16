@@ -11,7 +11,6 @@ local adapter
 ---@type table<string, View>
 local viewers
 
-local group = vim.api.nvim_create_augroup("editree", {})
 local initialized = false
 
 --- The number of the buffer editree was opened from
@@ -20,7 +19,7 @@ local prev_buffer
 ---Initializes editree for the current buffer
 M.open = function()
 	local filetype = vim.bo["filetype"]
-	local viewer = viewers[filetype]
+	local viewer = viewers.from_filetype(filetype)
 	if not viewer then
 		vim.notify(("editree: No viewer found for filetype '%s'"):format(filetype), vim.log.levels.ERROR)
 		return

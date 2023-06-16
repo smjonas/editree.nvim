@@ -1,7 +1,8 @@
 let s:ESCAPE_PATTERN = '^$~.*[]\'
 
 syntax match FernLeaf   /^.*$/ transparent contains=FernLeafSymbol, EditreeId
-syntax match FernLeafSymbol /\%([/]\d\+ \)\@<=|  \||  / contained nextgroup=FernLeafText
+" syntax match FernLeafSymbol /\%([/]\d\+ \)\@<=|  \||  / contained nextgroup=FernLeafText
+" Default leaf symbol is |
 execute printf(
       \ 'syntax match FernLeafSymbol /\%([/]\d\+ \)\@<=%s\|%s/ contained nextgroup=FernLeafText',
       \ escape(g:fern#renderer#default#leaf_symbol, s:ESCAPE_PATTERN),
@@ -44,4 +45,3 @@ syntax match FernLeafText   /.*\ze.*$/ contained nextgroup=FernBadgeSep
 syntax match FernBranchText /.*\ze.*$/ contained nextgroup=FernBadgeSep
 syntax match FernBadgeSep   //         contained conceal nextgroup=FernBadge
 syntax match FernBadge      /.*/         contained
-
