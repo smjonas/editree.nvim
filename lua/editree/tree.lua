@@ -167,7 +167,7 @@ end
 ---@param depth integer
 function M:to_string(depth)
 	local is_dir = self.type == "directory"
-	local id = (self.id and self.id .. "/ " or "") or ""
+	local id = (self.id and "/" .. self.id or "") or ""
 	local result = ("%s%s%s\n"):format(id, (" "):rep(depth), self.name, "\n")
 
 	if is_dir then

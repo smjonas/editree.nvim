@@ -23,18 +23,22 @@ describe("oil adapter", function()
 
 	describe("should parse", function()
 		it("fern tree", function()
+			-- file2.txt is misindented intentionally - view:parse_entry should handle this
 			local lines = [[
 root
 |+ dir/
-|  file.txt
+|  file1.txt
+|     file2.txt
 |- dir2/
- |  file2.txt]]
+ |  file3.txt]]
+
 			local expected = [[
 root
  dir/
- file.txt
+ file1.txt
+ file2.txt
  dir2/
-  file2.txt]]
+  file3.txt]]
 
 			local tree = unwrap(adapter._build_tree(fern, split_lines(lines)))
 			assert.are_same(expected, tostring(tree))
@@ -49,10 +53,10 @@ root
 /005  |  file2.txt]]
 			local expected = [[
 root
-002/  dir/
-003/  file.txt
-004/  dir2/
-005/   file2.txt]]
+/002 dir/
+/003 file.txt
+/004 dir2/
+/005  file2.txt]]
 
 			local tree = unwrap(adapter._parse_tree_with_ids(fern, split_lines(lines)))
 			assert.are_same(expected, tostring(tree))
@@ -62,17 +66,18 @@ root
 	describe("should reformat", function()
 		it("when whole line is overindented", function()
 			local lines = [[
-	root
-	      /002 |  file.txt
-	]]
+root
+      /002 |  file.txt
+        /003 |  file2.txt]]
 			local expected = [[
-	root
-	 file.txt
-	     ]]
+root
+/002 file.txt
+/003 file2.txt
+]]
 
-			local tree = unwrap(adapter._build_tree(fern, split_lines(lines)))
-			-- local actual =
-			-- assert.are
+			local reformatted_lines = adapter._reformat_lines(fern, split_lines(lines))
+			local tree = unwrap(adapter._parse_tree_with_ids(fern, reformatted_lines))
+			assert.are_same(expected, tostring(tree))
 		end)
 	end)
 end)

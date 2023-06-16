@@ -30,7 +30,7 @@ M._build_tree = function(view, lines, extract_id)
 			if id == false then
 				return false, nil
 			elseif id ~= nil then
-				-- Remove leading ID from line
+				-- Remove leading ID
 				line = line:sub(#id + 3)
 			end
 		end
@@ -64,8 +64,9 @@ end
 
 ---@param view View
 ---@param lines string[]
+---@param ignore_invalid_ids boolean
 ---@return boolean success, editree.Tree? tree
-M._parse_tree_with_ids = function(view, lines)
+M._parse_tree_with_ids = function(view, lines, ignore_invalid_ids)
 	-- Remove blank lines
 	lines = vim.iter(lines)
 		:filter(function(line)
@@ -77,7 +78,7 @@ M._parse_tree_with_ids = function(view, lines)
 	local ok, tree = M._build_tree(view, lines, function(line)
 		local _, _, id = line:find("^/(%d+) ")
 		if id then
-			if tonumber(id) > max_id or tonumber(id) == 0 then
+			if not ignore_invalid_ids and tonumber(id) > max_id or tonumber(id) == 0 then
 				-- Unexpected ID
 				return false
 			end
@@ -85,6 +86,34 @@ M._parse_tree_with_ids = function(view, lines)
 		return id
 	end)
 	return ok, tree
+end
+
+--- Returns the updated tree after reindenting and reformatting the lines.
+---@param view View
+---@param lines string[]
+---@return string[] lines the updated lines
+M._reformat_lines = function(view, lines)
+	-- Whole line is indented (including the ID), reformat it
+	-- (Turn "   /001 file.txt" into "/001    file.txt")
+	local new_lines = vim.iter(lines)
+		:map(function(line)
+			local _, _, leading_ws, id, name = line:find("^(%s+)(/%d+ )(.*)")
+			if id then
+				line = id .. (" "):rep(#leading_ws) .. name
+			end
+			return line
+		end)
+		:totable()
+
+	-- Ignore invalid IDs since this tree is not used to compute the diffs
+	local _, tree = M._parse_tree_with_ids(view, new_lines, false)
+
+	-- Use the tree to reconstruct the lines
+	local reformatted_lines = {}
+	tree:for_each(function(entry)
+		table.insert(reformatted_lines, view.reformat_entry(entry))
+	end)
+	return reformatted_lines
 end
 
 ---Adds IDs to each node in the tree as well as at the beginning of each line.
@@ -216,7 +245,7 @@ function M.init_from_view(view, lines, return_to_view_cb)
 		group = augroup,
 		callback = function()
 			local updated_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-			local ok, modified_tree = M._parse_tree_with_ids(view, updated_lines)
+			local ok, modified_tree = M._parse_tree_with_ids(view, updated_lines, true)
 			if not ok then
 				print("Found unexpected ID")
 				return

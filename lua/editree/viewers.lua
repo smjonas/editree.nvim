@@ -4,7 +4,7 @@
 ---@field is_file fun(string): boolean
 ---@field is_directory fun(string): boolean
 ---@field parse_entry fun(string): string
----@field format_entry fun(Tree): string
+---@field reformat_entry fun(Tree): string
 ---@field get_root_path fun(): string
 ---@field _symbol fun(string): string
 
@@ -44,21 +44,22 @@ fern = {
 		return symbol
 	end,
 	parse_entry = function(line)
-		local x = strip_patterns({
-			"^%s*",
-			"%s*$",
+		return strip_patterns({
+			"^%s+",
+			"%s+$",
 			vim.pesc(fern._symbol("leaf")),
 			vim.pesc(fern._symbol("collapsed")),
 			vim.pesc(fern._symbol("expanded")),
+			-- Also remove whitespace after the fern symbols
+			"^%s+",
 		}, line)
-		return x
 	end,
-	-- TODO: format entry on change
-	format_entry = function(entry)
+	reformat_entry = function(entry)
 		if entry:is_root() then
 			return entry.name
 		end
-		local padding = (" "):rep(entry.depth)
+		-- File with depth == 1 starts with "|  " (no padding)
+		local padding = (" "):rep(entry.depth - 1)
 		local symbol
 		if entry.type == "directory" then
 			symbol = vim.tbl_isempty(entry.children) and fern._symbol("collapsed") or fern._symbol("expanded")
@@ -67,7 +68,7 @@ fern = {
 		else
 			assert(false, "Unknown entry type: " .. entry.type)
 		end
-		return padding .. symbol .. entry.name
+		return ("/%s %s%s%s"):format(entry.id, padding, symbol, entry.name)
 	end,
 	get_root_path = function()
 		local helper = vim.fn["fern#helper#new"]()
