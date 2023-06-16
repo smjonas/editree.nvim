@@ -39,13 +39,19 @@ fern = {
 		return line:gsub("$", "")
 	end,
 	_symbol = function(symbol_name)
-		return vim.g[("fern#renderer#default#%s_symbol"):format(symbol_name)]
+		local symbol = vim.g[("fern#renderer#default#%s_symbol"):format(symbol_name)]
+		assert(symbol, "fern symbol not found: " .. symbol_name)
+		return symbol
 	end,
 	parse_entry = function(line)
-		return strip_patterns(
-			{ "^%s*", "%s*$", fern._symbol("leaf"), fern._symbol("collapsed"), fern._symbol("expanded") },
-			line
-		)
+		local x = strip_patterns({
+			"^%s*",
+			"%s*$",
+			vim.pesc(fern._symbol("leaf")),
+			vim.pesc(fern._symbol("collapsed")),
+			vim.pesc(fern._symbol("expanded")),
+		}, line)
+		return x
 	end,
 	-- TODO: format entry on change
 	format_entry = function(entry)
