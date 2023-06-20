@@ -8,10 +8,11 @@ local M = {}
 
 local id_generator = require("editree.id_generator")
 local stack = require("editree.stack")
+local api = vim.api
 
 ---@type integer
 local bufnr
-local augroup = vim.api.nvim_create_augroup("editree", {})
+local augroup = api.nvim_create_augroup("editree", {})
 
 M._build_tree = function(view, lines, extract_id)
 	lines[1] = view.read_root_line and view.read_root_line(lines[1]) or view.read_line(lines[1])
@@ -38,8 +39,10 @@ M._build_tree = function(view, lines, extract_id)
 
 		-- Count number of leading whitespaces
 		local depth = #line:gsub("^(%s*).*", "%1")
+
 		-- Moving up in the tree
 		if depth < cur_depth and #dir_stack > 1 then
+			print(depth, cur_depth)
 			for _ = 1, cur_depth - depth do
 				dir_stack:pop()
 			end
@@ -48,16 +51,26 @@ M._build_tree = function(view, lines, extract_id)
 
 		local name = view.parse_entry(line)
 
-		if depth == cur_depth then
+		-- Account for overindented lines (if the previous entry is a file, we should stay on the same level of the tree)
+		local is_overindented = depth > cur_depth and not cur_dir:is_root() and view.is_file(cur_dir.name)
+		if is_overindented then
+			print("xx")
+			print(cur_dir.name)
+		end
+
+		if depth == cur_depth or is_overindented then
 			local parent_dir = cur_dir.parent
 			local new_node = view.is_file(name) and parent_dir:add_file(name, id) or parent_dir:add_dir(name, id)
 			-- Replace the top
 			dir_stack[#dir_stack] = new_node
+      -- Keep same depth
 		elseif depth > cur_depth then -- Moving down in the tree
 			local child_node = view.is_file(name) and cur_dir:add_file(name, id) or cur_dir:add_dir(name, id)
 			dir_stack:push(child_node)
-		end
-		cur_depth = depth
+      cur_depth = cur_depth + 1
+    else
+      print(name)
+    end
 	end
 	return true, tree
 end
@@ -88,7 +101,7 @@ M._parse_tree_with_ids = function(view, lines, ignore_invalid_ids)
 	return ok, tree
 end
 
---- Returns the updated tree after reindenting and reformatting the lines.
+--- Returns the updated lines after reindenting and reformatting the given lines.
 ---@param view View
 ---@param lines string[]
 ---@return string[] lines the updated lines
@@ -177,20 +190,20 @@ local apply_diffs = function(root_path, diffs, return_to_view_cb)
 end
 
 local ensure_buffer = function(buf_name, syntax_name)
-	local bufs = vim.api.nvim_list_bufs()
+	local bufs = api.nvim_list_bufs()
 	-- Check for an existing editree buffer
 	for _, buf in ipairs(bufs) do
-		if vim.api.nvim_buf_get_name(buf) == buf_name then
-			vim.api.nvim_buf_delete(buf, { force = true })
+		if api.nvim_buf_get_name(buf) == buf_name then
+			api.nvim_buf_delete(buf, { force = true })
 		end
 	end
-	if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+	if bufnr and api.nvim_buf_is_valid(bufnr) then
 		return
 	end
 
-	bufnr = vim.api.nvim_create_buf(false, false)
-	vim.api.nvim_buf_set_name(bufnr, buf_name)
-	local winid = vim.api.nvim_get_current_win()
+	bufnr = api.nvim_create_buf(false, false)
+	api.nvim_buf_set_name(bufnr, buf_name)
+	local winid = api.nvim_get_current_win()
 
 	local buf_opts = {
 		filetype = "editree",
@@ -198,9 +211,9 @@ local ensure_buffer = function(buf_name, syntax_name)
 		modified = false,
 	}
 	for k, v in pairs(buf_opts) do
-		vim.api.nvim_set_option_value(k, v, { buf = bufnr })
+		api.nvim_set_option_value(k, v, { buf = bufnr })
 	end
-	vim.api.nvim_set_option_value("syntax", syntax_name, { buf = bufnr })
+	api.nvim_set_option_value("syntax", syntax_name, { buf = bufnr })
 
 	local win_opts = {
 		wrap = false,
@@ -212,7 +225,7 @@ local ensure_buffer = function(buf_name, syntax_name)
 		concealcursor = "n",
 	}
 	for k, v in pairs(win_opts) do
-		vim.api.nvim_set_option_value(k, v, { win = winid })
+		api.nvim_set_option_value(k, v, { win = winid })
 	end
 end
 
@@ -227,32 +240,45 @@ end
 ---@param return_to_view_cb fun()
 function M.init_from_view(view, lines, return_to_view_cb)
 	local root_path = view:get_root_path()
-	local cursor_row = vim.api.nvim_win_get_cursor(0)[1]
+	local cursor_row = api.nvim_win_get_cursor(0)[1]
 	ensure_buffer("editree://" .. root_path, view.syntax_name)
 
-	local _, tree = M._build_tree(view, lines)
-	local lines_with_ids = prepend_ids(tree, lines)
+	local _, old_tree = M._build_tree(view, lines)
+	local lines_with_ids = prepend_ids(old_tree, lines)
 
-	vim.api.nvim_set_current_buf(bufnr)
-	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines_with_ids)
+	api.nvim_set_current_buf(bufnr)
+	api.nvim_buf_set_lines(bufnr, 0, -1, false, lines_with_ids)
 
 	-- Inherit the cursor position from the viewer
-	vim.api.nvim_win_set_cursor(0, { cursor_row, get_first_letter_col(lines[cursor_row]) })
+	api.nvim_win_set_cursor(0, { cursor_row, get_first_letter_col(lines[cursor_row]) })
 	vim.bo[bufnr].modified = false
 
-	vim.api.nvim_create_autocmd("BufWriteCmd", {
+  -- TODO: think about when to reformat
+	api.nvim_create_autocmd({ "TextChanged", "InsertLeave" }, {
 		pattern = "editree://*",
 		group = augroup,
 		callback = function()
-			local updated_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-			local ok, modified_tree = M._parse_tree_with_ids(view, updated_lines, true)
+			local updated_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+			local formatted_lines = M._reformat_lines(view, updated_lines)
+			api.nvim_buf_set_lines(bufnr, 0, -1, false, formatted_lines)
+		end,
+		desc = "Reformat editree buffer",
+	})
+
+	-- Parse the modified tree buffer, generate a diff and apply the changes
+	api.nvim_create_autocmd("BufWriteCmd", {
+		pattern = "editree://*",
+		group = augroup,
+		callback = function()
+			local updated_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+			local ok, new_tree = M._parse_tree_with_ids(view, updated_lines, true)
 			if not ok then
 				print("Found unexpected ID")
 				return
 			end
 			local diffs
 			-- Need to clone because computing the diff modifies the input trees
-			ok, diffs = require("editree.diff").compute(tree:clone(), modified_tree)
+			ok, diffs = require("editree.diff").compute(old_tree:clone(), new_tree)
 			if ok then
 				apply_diffs(root_path, diffs, return_to_view_cb)
 			else
@@ -265,10 +291,11 @@ end
 
 -- ---@type augroup integer
 -- function M:new(augroup)
--- 	vim.api.nvim_create_autocmd("InsertEnter", {
+-- 	api.nvim_create_autocmd("InsertEnter", {
 -- 		group = augroup,
 --     pattern =
 -- 		callback = function()
+--
 -- 			print("enter")
 -- 			old_tree = M.parse_tree()
 -- 		end,

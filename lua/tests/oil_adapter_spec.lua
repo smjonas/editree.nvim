@@ -72,12 +72,45 @@ root
 			local expected = [[
 root
 /002 file.txt
-/003 file2.txt
-]]
+/003 file2.txt]]
 
 			local reformatted_lines = adapter._reformat_lines(fern, split_lines(lines))
 			local tree = unwrap(adapter._parse_tree_with_ids(fern, reformatted_lines))
 			assert.are_same(expected, tostring(tree))
 		end)
+
+		it("when whole line is overindented", function()
+			local lines = [[
+root
+      /002 |  file.txt
+        /003 |  file2.txt]]
+			local expected = [[
+root
+/002 file.txt
+/003 file2.txt]]
+
+			local reformatted_lines = adapter._reformat_lines(fern, split_lines(lines))
+			local tree = unwrap(adapter._parse_tree_with_ids(fern, reformatted_lines))
+			assert.are_same(expected, tostring(tree))
+		end)
+
+		it("when directory is moved", function()
+			local lines = [[
+root
+/001 |  dir1/
+/002  |  child_dir/
+  /001 file.txt
+        /003 |  file2.txt]]
+			local expected = [[
+root
+/002 file.txt
+/003 file2.txt]]
+
+			local reformatted_lines = adapter._reformat_lines(fern, split_lines(lines))
+			local tree = unwrap(adapter._parse_tree_with_ids(fern, reformatted_lines))
+			assert.are_same(expected, tostring(tree))
+		end)
+
+
 	end)
 end)
