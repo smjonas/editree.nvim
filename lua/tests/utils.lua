@@ -1,5 +1,10 @@
 local M = {}
 
+---@param lines string
+M.split_lines = function(lines)
+	return vim.split(lines, "\n", {})
+end
+
 M.unwrap = function(...)
 	local ok, result = ...
 	if ok then

@@ -1,3 +1,4 @@
+---@class editree.Stack
 local M = {}
 
 function M:push(value)
