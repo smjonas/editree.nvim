@@ -15,7 +15,7 @@ local bufnr
 local augroup = api.nvim_create_augroup("editree", {})
 
 M._build_tree = function(view, lines, extract_id)
-	lines[1] = view.read_root_line and view.read_root_line(lines[1]) or view.read_line(lines[1])
+	lines[1] = view.read_root_line(lines[1])
 	local tree = require("editree.tree").new(lines[1])
 	local dir_stack = stack.new()
 
@@ -75,7 +75,7 @@ M._build_tree = function(view, lines, extract_id)
 	return true, tree
 end
 
----@param view View
+---@param view editree.View
 ---@param lines string[]
 ---@param ignore_invalid_ids boolean
 ---@return boolean success, editree.Tree? tree
@@ -102,7 +102,7 @@ M._parse_tree_with_ids = function(view, lines, ignore_invalid_ids)
 end
 
 --- Returns the updated lines after reindenting and reformatting the given lines.
----@param view View
+---@param view editree.View
 ---@param lines string[]
 ---@return string[] lines the updated lines
 M._reformat_lines = function(view, lines)
@@ -124,7 +124,7 @@ M._reformat_lines = function(view, lines)
 	-- Use the tree to reconstruct the lines
 	local reformatted_lines = {}
 	tree:for_each(function(entry)
-		table.insert(reformatted_lines, view.reformat_entry(entry))
+		table.insert(reformatted_lines, view.tree_entry_tostring(entry))
 	end)
 	return reformatted_lines
 end
@@ -235,7 +235,7 @@ local get_first_letter_col = function(line)
 end
 
 --- Parses the buffer lines given the active view.
----@param view View
+---@param view editree.View
 ---@param lines string[]
 ---@param return_to_view_cb fun()
 function M.init_from_view(view, lines, return_to_view_cb)

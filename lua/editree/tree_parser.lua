@@ -44,7 +44,7 @@ end
 ---@param lines string[]
 ---@return editree.Tree
 M.parse_tree = function(lines)
-	local tree = require("editree.tree").new(lines[1])
+	local tree = Tree.new(lines[1])
 	local dir_stack = Stack.new()
 
 	local cur_dir = tree
@@ -56,7 +56,7 @@ M.parse_tree = function(lines)
 	return tree
 end
 
----@param view View
+---@param view editree.View
 ---@param lines string[]
 ---@param ignore_invalid_ids boolean
 ---@return boolean success, editree.Tree? tree

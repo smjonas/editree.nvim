@@ -8,7 +8,7 @@ local M = {}
 ---@type OilAdapter
 local adapter
 
----@type table<string, View>
+---@type table<string, editree.View>
 local viewers
 
 local initialized = false
@@ -21,7 +21,7 @@ M.open = function()
 	local filetype = vim.bo["filetype"]
 	local viewer = viewers.from_filetype(filetype)
 	if not viewer then
-		vim.notify(("editree: No viewer found for filetype '%s'"):format(filetype), vim.log.levels.ERROR)
+		vim.notify(("[editree] No viewer found for filetype '%s'"):format(filetype), vim.log.levels.ERROR)
 		return
 	end
 
@@ -48,7 +48,7 @@ end
 M.setup = function()
 	local ok, _ = pcall(require, "oil.adapters.files")
 	if not ok then
-		vim.notify("editree: Module oil.adapters.files not found, please install oil.nvim", vim.log.levels.ERROR)
+		vim.notify("[editree] Module oil.adapters.files not found, please install oil.nvim", vim.log.levels.ERROR)
 		return
 	end
 	adapter = require("editree.oil_adapter")
