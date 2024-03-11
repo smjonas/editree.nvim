@@ -23,7 +23,7 @@ function FernNerdfont:parse_entry(line)
     return strip_patterns({ "^%s*.", "%s*$" }, line)
 end
 
-function FernNerdfont:tree_entry_tostring(entry)
+function FernNerdfont:tree_node_tostring(entry)
     return "todo"
 end
 

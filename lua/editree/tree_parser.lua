@@ -1,3 +1,5 @@
+--- Responsible for turning a view into a tree.
+
 local M = {}
 
 local Stack = require("editree.stack")
@@ -19,7 +21,7 @@ local visit_line = function(line, dir_stack)
 	end
 
 	local parent_dir = dir_stack:top()
-  local name = line:sub(depth + 1)
+	local name = line:sub(depth + 1)
 	if is_file(name) then
 		parent_dir:add_file(name)
 	else
@@ -56,18 +58,18 @@ M.parse_tree = function(lines)
 	return tree
 end
 
+local remove_blank_lines = function(lines)
+	return vim.tbl_filter(function(line)
+		return not line:match("^%s*$")
+	end, lines)
+end
+
 ---@param view editree.View
 ---@param lines string[]
 ---@param ignore_invalid_ids boolean
 ---@return boolean success, editree.Tree? tree
 M.parse_tree_with_ids = function(view, lines, ignore_invalid_ids)
-	-- Remove blank lines
-	lines = vim.iter(lines)
-		:filter(function(line)
-			return not line:find("^%s*$")
-		end)
-		:totable()
-
+	lines = remove_blank_lines(lines)
 	local max_id = #lines
 	local ok, tree = M._build_tree(view, lines, function(line)
 		local _, _, id = line:find("^/(%d+) ")

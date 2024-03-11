@@ -1,3 +1,4 @@
+---@class editree.IdGenerator
 local M = {}
 
 local cur_id = 1

@@ -73,6 +73,7 @@ function M:get_rel_path()
 	return vim.fs.joinpath((table.unpack or unpack)(parts))
 end
 
+-- TODO: move complex operations to separate class
 ---@return table<string, editree.Tree>
 function M:id_to_child_map()
 	assert(self.type == "directory", "attempting to get child of non-directory")
@@ -110,7 +111,7 @@ function M:remove_children_by_ids(ids_to_remove)
 end
 
 ---Visits each node in the tree in a breadth-first manner and calls fn on every matching node.
----@param self editree.Directory
+---@param self editree.Tree
 ---@param type "directory" | "file" | nil
 ---@param fn fun(editree.Tree)
 function M:for_each(fn, type)
