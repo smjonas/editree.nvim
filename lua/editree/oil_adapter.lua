@@ -39,6 +39,9 @@ local diff_to_action = function(root_path, diff)
 	return action
 end
 
+---@param root_path string
+---@param diffs editree.Tree[]
+---@param return_to_view_cb fun()
 local apply_diffs = function(root_path, diffs, return_to_view_cb)
 	local actions = vim.tbl_map(function(diff)
 		return diff_to_action(root_path, diff)
@@ -104,10 +107,14 @@ local get_first_letter_col = function(line)
 	return start_pos - 1 or 0
 end
 
+---@param view editree.View
+---@param old_tree editree.Tree
+---@param root_path string
+---@param return_to_view_cb fun()
 local calculate_tree_diff_and_apply = function(view, old_tree, root_path, return_to_view_cb)
 	local updated_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
   updated_lines = view:preprocess_buf_lines(updated_lines)
-	local ok, new_tree = tree_parser.parse_tree_with_ids(view, updated_lines, true)
+	local ok, new_tree = tree_parser.parse_tree_with_ids(updated_lines, true)
 	if not ok then
 		print("Found unexpected ID")
 		return

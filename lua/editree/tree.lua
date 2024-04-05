@@ -108,6 +108,7 @@ function M:remove_children_by_ids(ids_to_remove)
 	end, self.children)
 end
 
+---@todo: swap arguments for better readability
 ---Visits each node in the tree in a breadth-first manner and calls fn on every matching node.
 ---@param self editree.Tree
 ---@param type "directory" | "file" | nil

@@ -14,4 +14,39 @@ M.add_ids = function(tree, id_generator)
 	end)
 end
 
+---@param tree editree.Tree
+---@return boolean
+function M.contains_unique_names(tree)
+	assert(tree.type == "directory")
+	local saw_name = {}
+	for _, child in ipairs(tree.children) do
+		if saw_name[child.name] then
+			return false
+		end
+		saw_name[child.name] = true
+	end
+	return true
+end
+
+---Returns a map mapping from the ID to a list of nodes with that ID.
+---@param tree editree.Tree
+---@param id_map table<string, editree.Tree[]>?
+---@return table<string, editree.Tree[]>
+function M.get_recursive_id_map(tree, id_map)
+	assert(tree.type == "directory")
+	id_map = id_map or vim.defaulttable(function()
+		return {}
+	end)
+	for _, child in ipairs(tree.children) do
+		if child.id then
+			table.insert(id_map[child.id], child)
+		end
+
+		if child.type == "directory" then
+			M.get_recursive_id_map(child, id_map)
+		end
+	end
+	return id_map
+end
+
 return M
