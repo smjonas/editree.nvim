@@ -29,21 +29,22 @@ function Fern:is_directory(dir)
 	return dir:match("/$")
 end
 
-function Fern:tree_node_tostring(entry)
+function Fern:tree_node_tostring(node)
   print("Entry to string")
-	if entry:is_root() then
-		return entry.name
+	if node:is_root() then
+		return node.name
 	end
-	local padding = (" "):rep(entry.depth - 1)
+	local padding = (" "):rep(node.depth - 1)
 	local symbol
-	if entry.type == "directory" then
-		symbol = vim.tbl_isempty(entry.children) and get_symbol("collapsed") or get_symbol("expanded")
-	elseif entry.type == "file" then
+	if node.type == "directory" then
+		symbol = vim.tbl_isempty(node.children) and get_symbol("collapsed") or get_symbol("expanded")
+	elseif node.type == "file" then
 		symbol = get_symbol("leaf")
 	else
-		error("Unknown entry type: " .. entry.type)
+		error("Unknown entry type: " .. node.type)
 	end
-	return ("/%s %s%s%s"):format(entry.id, padding, symbol, entry.name)
+  local suffix = node.type == "directory" and "/" or ""
+	return ("/%s %s%s%s%s"):format(node.id, padding, symbol, node.name, suffix)
 end
 
 function Fern:get_root_path()

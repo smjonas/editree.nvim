@@ -37,11 +37,10 @@ function M:is_root()
 end
 
 ---@param name string
----@param id string?
 ---@return editree.Directory
-function M:add_dir(name, id)
+function M:add_dir(name)
 	assert(self.type == "directory")
-	local dir = M.new(name, id, "directory")
+	local dir = M.new(name, "directory")
 	dir.parent = self
 	dir.depth = self.depth + 1
 	table.insert(self.children, dir)
@@ -49,11 +48,10 @@ function M:add_dir(name, id)
 end
 
 ---@param name string
----@param id string?
 ---@return editree.File
-function M:add_file(name, id)
+function M:add_file(name)
 	assert(self.type == "directory", "attempting to add file to non-directory")
-	local file = M.new(name, id, "file")
+	local file = M.new(name, "file")
 	file.parent = self
 	file.depth = self.depth + 1
 	table.insert(self.children, file)
@@ -132,7 +130,8 @@ end
 ---@param depth integer
 function M:to_string(depth)
 	local is_dir = self.type == "directory"
-	local result = ("%s%s\n"):format((" "):rep(depth), self.name, "\n")
+  local suffix = is_dir and "/" or ""
+	local result = ("%s%s%s\n"):format((" "):rep(depth), self.name, suffix)
 
 	if is_dir then
 		for _, child in ipairs(self.children) do

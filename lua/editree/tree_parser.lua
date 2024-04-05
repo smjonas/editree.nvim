@@ -1,4 +1,4 @@
---- Responsible for turning a view into a tree.
+--- Turning a view into a tree.
 
 local M = {}
 
@@ -7,6 +7,12 @@ local Tree = require("editree.tree")
 
 local is_file = function(name)
 	return not name:match("/$")
+end
+
+---@return string
+local clean_node_name = function(name)
+  local result, _ = name:gsub("/", "")
+  return result
 end
 
 ---@param line string
@@ -21,11 +27,11 @@ local visit_line = function(line, dir_stack)
 	end
 
 	local parent_dir = dir_stack:top()
-	local name = line:sub(depth + 1)
+	local name, _ = line:sub(depth + 1)
 	if is_file(name) then
-		parent_dir:add_file(name)
+		parent_dir:add_file(clean_node_name(name))
 	else
-		local new_dir = parent_dir:add_dir(name)
+		local new_dir = parent_dir:add_dir(clean_node_name(name))
 		dir_stack:push(new_dir)
 	end
 	return parent_dir, depth
@@ -46,6 +52,7 @@ end
 ---@param lines string[]
 ---@return editree.Tree
 M.parse_tree = function(lines)
+  lines[1], _ = lines[1]:gsub("/", "")
 	local tree = Tree.new(lines[1])
 	local dir_stack = Stack.new()
 
