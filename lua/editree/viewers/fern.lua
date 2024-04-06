@@ -30,7 +30,6 @@ function Fern:is_directory(dir)
 end
 
 function Fern:tree_node_tostring(node)
-  print("Entry to string")
 	if node:is_root() then
 		return node.name
 	end
@@ -43,7 +42,7 @@ function Fern:tree_node_tostring(node)
 	else
 		error("Unknown entry type: " .. node.type)
 	end
-  local suffix = node.type == "directory" and "/" or ""
+	local suffix = node.type == "directory" and "/" or ""
 	return ("/%s %s%s%s%s"):format(node.id, padding, symbol, node.name, suffix)
 end
 
@@ -52,20 +51,26 @@ function Fern:get_root_path()
 	return helper.fern.root._path
 end
 
-function Fern:preprocess_buf_lines(lines)
-	local output = { strip_patterns({ "$" }, lines[1]) }
-	for i = 2, #lines do
-		local stripped = strip_patterns({
-			vim.pesc(get_symbol("leaf")),
-			vim.pesc(get_symbol("collapsed")),
-			vim.pesc(get_symbol("expanded")),
-			-- This invisible character is present at the end of each line in a fern buffer
-			"$",
-		}, lines[i])
-		-- Prepend a space for correct indentation
-		table.insert(output, " " .. stripped)
+function Fern.preprocess_buf_line(line, line_nr)
+	-- Root line
+	if line_nr == 1 then
+		return strip_patterns({ "$" }, line)
 	end
-	return output
+	local stripped = strip_patterns({
+		vim.pesc(get_symbol("leaf")),
+		vim.pesc(get_symbol("collapsed")),
+		vim.pesc(get_symbol("expanded")),
+		-- This invisible character is present at the end of each line in a fern buffer
+		"$",
+	}, line)
+	-- Prepend a space for correct indentation
+	return " " .. stripped
+end
+
+function Fern:preprocess_buf_lines(lines)
+	return vim.tbl_map(function(line)
+		return Fern.preprocess_buf_line(line)
+	end, lines)
 end
 
 return Fern

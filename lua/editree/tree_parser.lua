@@ -9,9 +9,11 @@ local is_file = function(name)
 	return not name:match("/$")
 end
 
+---Removes trailing slash which should not be part of the node name.
+---@param name string
 ---@return string
 local clean_node_name = function(name)
-	local result, _ = name:gsub("/", "")
+	local result, _ = name:gsub("/%s*$", "")
 	return result
 end
 
@@ -52,8 +54,8 @@ end
 ---@param lines string[]
 ---@return editree.Tree
 M.parse_tree = function(lines)
-	lines[1], _ = lines[1]:gsub("/", "")
-	local tree = Tree.new(lines[1])
+	lines[1], _ = lines[1]:gsub("/%s*$", "")
+	local tree = Tree.new(lines[1], "directory")
 	local dir_stack = Stack.new()
 
 	local cur_dir = tree
@@ -83,13 +85,14 @@ local function try_extract_id(line, ignore_invalid_id, max_id)
 			return nil
 		end
 	end
-  return id
+	return id
 end
 
 ---@param lines string[]
 ---@param ignore_invalid_ids boolean
+---@param preprocess_buf_line fun(string, number): string
 ---@return boolean success, editree.Tree? tree
-M.parse_tree_with_ids = function(lines, ignore_invalid_ids)
+M.parse_tree_with_ids = function(lines, ignore_invalid_ids, preprocess_buf_line)
 	lines = remove_blank_lines(lines)
 	local max_id = #lines
 
@@ -102,9 +105,17 @@ M.parse_tree_with_ids = function(lines, ignore_invalid_ids)
 
 	for i = 2, #lines do
 		local id = try_extract_id(lines[i], ignore_invalid_ids, max_id)
-		if not id and not ignore_invalid_ids then
-			return false, nil
+		if not id then
+			if not ignore_invalid_ids then
+				return false, nil
+			end
+		else
+			-- Remove leading ID
+			-- TODO: check len
+			lines[i] = lines[i]:sub(#id + 3)
 		end
+    -- Need to remove view-specific characters after removing ID
+    lines[i] = preprocess_buf_line(lines[i], i)
 		cur_dir = visit_line(lines[i], dir_stack)
 	end
 	return true, tree

@@ -113,8 +113,7 @@ end
 ---@param return_to_view_cb fun()
 local calculate_tree_diff_and_apply = function(view, old_tree, root_path, return_to_view_cb)
 	local updated_lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  updated_lines = view:preprocess_buf_lines(updated_lines)
-	local ok, new_tree = tree_parser.parse_tree_with_ids(updated_lines, true)
+	local ok, new_tree = tree_parser.parse_tree_with_ids(updated_lines, true, view.preprocess_buf_line)
 	if not ok then
 		print("Found unexpected ID")
 		return
