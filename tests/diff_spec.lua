@@ -1,7 +1,7 @@
 local Tree = require("editree.tree")
 local diff = require("editree.diff")
 
-local unwrap = require("tests.util").unwrap
+local unwrap = require("tests.utils").unwrap
 
 local remove_parents = function(diffs)
 	local remove_from_tree = function(node)
@@ -115,7 +115,7 @@ describe("diff", function()
 		assert.diffs_equal(expected, actual)
 	end)
 
-	it("works for simple move", function()
+	it("#k works for simple move", function()
 		local old = Tree.new("root")
 		local from = old:add_dir("child1", "001"):add_file("file1.txt", "002")
 		old:add_dir("child2", "003")

@@ -4,7 +4,7 @@ local M = {}
 ---@class editree.Tree
 ---@field type string
 ---@field name string
----@field id string
+---@field id string?
 ---@field parent editree.Tree?
 ---@field depth integer
 ---@field id_to_child_map fun(): table<string, editree.Tree>
@@ -37,23 +37,27 @@ function M:is_root()
 end
 
 ---@param name string
+---@param id string? optional ID associated with this directory, used in tests
 ---@return editree.Directory
-function M:add_dir(name)
+function M:add_dir(name, id)
 	assert(self.type == "directory")
 	local dir = M.new(name, "directory")
 	dir.parent = self
 	dir.depth = self.depth + 1
+  dir.id = id
 	table.insert(self.children, dir)
 	return dir
 end
 
 ---@param name string
+---@param id string? optional ID associated with this file, used in tests
 ---@return editree.File
-function M:add_file(name)
+function M:add_file(name, id)
 	assert(self.type == "directory", "attempting to add file to non-directory")
 	local file = M.new(name, "file")
 	file.parent = self
 	file.depth = self.depth + 1
+  file.id = id
 	table.insert(self.children, file)
 	return file
 end
@@ -72,17 +76,7 @@ function M:get_rel_path()
 end
 
 -- TODO: move complex operations to separate class
----@return table<string, editree.Tree>
-function M:id_to_child_map()
-	assert(self.type == "directory", "attempting to get child of non-directory")
-	local map = {}
-	for _, child in ipairs(self.children) do
-		map[child.id] = child
-	end
-	return map
-end
-
----@param self editree.Directory
+---@param self editree.Tree
 ---@param id string
 ---@return editree.Tree? child #the removed child if it could be removed or nil if the child with the given ID did not exist
 function M:remove_child_by_id(id)
@@ -99,7 +93,7 @@ function M:remove_child_by_id(id)
 	return table.remove(self.children, idx)
 end
 
----@param self editree.Directory
+---@param self editree.Tree
 ---@param ids_to_remove string[]
 function M:remove_children_by_ids(ids_to_remove)
 	assert(self.type == "directory")

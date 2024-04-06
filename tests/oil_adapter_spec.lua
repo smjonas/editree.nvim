@@ -2,7 +2,7 @@ local adapter = require("editree.oil_adapter")
 local viewers = require("editree.viewers")
 local fern = viewers.from_filetype("fern")
 
-local unwrap = require("tests.util").unwrap
+local unwrap = require("tests.utils").unwrap
 
 local split_lines = function(lines)
 	return vim.split(lines, "\n", {})

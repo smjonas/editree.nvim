@@ -28,7 +28,7 @@ function M.contains_unique_names(tree)
 	return true
 end
 
----Returns a map mapping from the ID to a list of nodes with that ID.
+---Returns a mapping from an ID to a list of nodes with that ID.
 ---@param tree editree.Tree
 ---@param id_map table<string, editree.Tree[]>?
 ---@return table<string, editree.Tree[]>
@@ -47,6 +47,18 @@ function M.get_recursive_id_map(tree, id_map)
 		end
 	end
 	return id_map
+end
+
+---Returns a mapping from each child's ID to the child itself.
+---@param tree editree.Tree
+---@return table<string, editree.Tree>
+function M.id_to_child_map(tree)
+	assert(tree.type == "directory", "attempting to get child of non-directory")
+	local map = {}
+	for _, child in ipairs(tree.children) do
+		map[child.id] = child
+	end
+	return map
 end
 
 return M

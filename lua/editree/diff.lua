@@ -34,7 +34,7 @@ local compute_diffs
 compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 	assert(old_tree.type == "directory" and new_tree.type == "directory")
 
-	local old_children_map = old_tree:id_to_child_map()
+	local old_children_map = tree_ops.id_to_child_map(old_tree)
 	local old_children_to_remove = {}
 
 	for _, child in ipairs(old_tree.children) do
@@ -64,6 +64,8 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 			table.insert(diffs, { type = "delete", node = child })
 			old_children_to_remove[id] = true
 		else
+      -- print("ID map")
+      -- print(vim.inspect(old_id_map))
 			table.insert(diffs, { type = "move", node = old_id_map[id], to = child })
 			new_tree:remove_child_by_id(id)
 		end
