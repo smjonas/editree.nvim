@@ -33,47 +33,37 @@ end
 describe("diff", function()
 	it("works for simple rename", function()
 		local old = Tree.new("root")
-		local file = old:add_file("file.txt", "001")
+		old:add_file("file.txt", "001")
 		local new = Tree.new("root")
-		local renamed_file = new:add_file("renamed_file.txt", "001")
+		new:add_file("renamed_file.txt", "001")
 
-		local expected = { { type = "rename", node = file:clone(), to = renamed_file:clone() } }
+		local expected = { { type = "rename", node_id = "001", new_name = "renamed_file.txt" } }
 		local actual = unwrap(diff.compute(old, new))
-		assert.diffs_equal(expected, actual)
+		assert.are_same(expected, actual)
 	end)
 
 	it("works for simple deletion", function()
 		local old = Tree.new("root")
-		local file = old:add_file("file1.txt", "001")
+		old:add_file("file1.txt", "001")
 		local new = Tree.new("root")
 
-		local expected = { { type = "delete", node = file:clone() } }
+		local expected = { { type = "delete", node_id = "001" } }
 		local actual = unwrap(diff.compute(old, new))
-		assert.diffs_equal(expected, actual)
-	end)
-
-	it("works for simple deletion", function()
-		local old = Tree.new("root")
-		local file = old:add_file("file1.txt", "001")
-		local new = Tree.new("root")
-
-		local expected = { { type = "delete", node = file:clone() } }
-		local actual = unwrap(diff.compute(old, new))
-		assert.diffs_equal(expected, actual)
+		assert.are_same(expected, actual)
 	end)
 
 	it("works for nested deletion", function()
 		local old = Tree.new("root")
 		local child = old:add_dir("child", "001")
 		child:add_file("file1.txt", "002")
-		local file2 = child:add_file("file2.txt", "003")
+		child:add_file("file2.txt", "003")
 
 		local new = Tree.new("root")
 		new:add_dir("child", "001"):add_file("file1.txt", "002")
 
-		local expected = { { type = "delete", node = file2:clone() } }
+		local expected = { { type = "delete", node_id = "003" } }
 		local actual = unwrap(diff.compute(old, new))
-		assert.diffs_equal(expected, actual)
+		assert.are_same(expected, actual)
 	end)
 
 	it("works for simple creation", function()
@@ -103,30 +93,36 @@ describe("diff", function()
 
 	it("works for simple copy", function()
 		local old = Tree.new("root")
-		local from = old:add_file("file1.txt", "001")
+		old:add_file("file1.txt", "001")
 
 		local new = Tree.new("root")
 		new:add_file("file1.txt", "001")
 		-- Has the same ID as the existing file
 		local to = new:add_file("file2.txt", "001")
 
-		local expected = { { type = "copy", node = from, to = to } }
 		local actual = unwrap(diff.compute(old, new))
-		assert.diffs_equal(expected, actual)
+    assert.are_same(1, #actual)
+    actual = actual[1]
+		assert.are_same("001", actual.from_id)
+		assert.are_same(to, actual.to)
 	end)
 
-	it("#k works for simple move", function()
+	it("works for simple move", function()
 		local old = Tree.new("root")
-		local from = old:add_dir("child1", "001"):add_file("file1.txt", "002")
+		old:add_dir("child1", "001"):add_file("file1.txt", "002")
 		old:add_dir("child2", "003")
 
 		local new = Tree.new("root")
 		new:add_dir("child1", "001")
 		local to = new:add_dir("child2", "003"):add_file("file1.txt", "002")
 
-		local expected = { { type = "move", node = from:clone(), to = to } }
 		local actual = unwrap(diff.compute(old, new))
-		assert.diffs_equal(expected, actual)
+    assert.are_same(1, #actual)
+    actual = actual[1]
+		assert.are_same("002", actual.from_id)
+		assert.are_same(to.id, "002")
+		assert.are_same(to.name, "file1.txt")
+		assert.are_same(to.parent.id, "003")
 	end)
 
 	it("errors on unknown ID in new tree", function()

@@ -61,4 +61,21 @@ function M.id_to_child_map(tree)
 	return map
 end
 
+function M.trees_are_equal(t1, t2)
+  if t1.id ~= t2.id or t1.type ~= t2.type then
+    return false
+  end
+  if t1.type == "directory" then
+    if #t1.children ~= #t2.children then
+      return false
+    end
+    for i = 1, #t1.children do
+      if not M.trees_are_equal(t1.children[i], t2.children[i]) then
+        return false
+      end
+    end
+  end
+  return true
+end
+
 return M

@@ -78,6 +78,7 @@ end
 -- TODO: move complex operations to separate class
 ---@param self editree.Tree
 ---@param id string
+---@return bool was_present #if there was a child with the given id
 ---@return editree.Tree? child #the removed child if it could be removed or nil if the child with the given ID did not exist
 function M:remove_child_by_id(id)
 	assert(self.type == "directory")
@@ -88,9 +89,9 @@ function M:remove_child_by_id(id)
 		end
 	end
 	if idx == -1 then
-		return nil
+		return false, nil
 	end
-	return table.remove(self.children, idx)
+	return true, table.remove(self.children, idx)
 end
 
 ---@param self editree.Tree

@@ -10,22 +10,42 @@ local tree_ops = require("editree.tree_ops")
 
 ---@class DiffDelete
 ---@field type "delete"
----@field node editree.Tree
+---@field node_id string
 
 ---@class DiffRename
 ---@field type "rename"
----@field node editree.Tree
----@field to editree.Tree
+---@field node_id editree.Tree
+---@field new_name string
 
 ---@class DiffCopy
 ---@field type "copy"
----@field node editree.Tree
+---@field from_id string
 ---@field to editree.Tree
 
 ---@class DiffMove
 ---@field type "move"
----@field node editree.Tree
+---@field from_id string
 ---@field to editree.Tree
+
+local create_node = function(node, diffs)
+  table.insert(diffs, { type = "create", node = node })
+end
+
+local delete_node = function(node_id, diffs)
+  table.insert(diffs, { type = "delete", node_id = node_id })
+end
+
+local rename_node = function(node_id, new_name, diffs)
+  table.insert(diffs, { type = "rename", node_id = node_id, new_name = new_name })
+end
+
+local copy_node = function(from_id, to, diffs)
+  table.insert(diffs, { type = "copy", from_id = from_id, to = to })
+end
+
+local move_node = function(from_id, to, diffs)
+  table.insert(diffs, { type = "move", from_id = from_id, to = to })
+end
 
 local compute_diffs
 ---@param old_tree editree.Tree
@@ -38,36 +58,41 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 	local old_children_to_remove = {}
 
 	for _, child in ipairs(old_tree.children) do
-		local id = child.id
-		assert(id, "child in old tree must have an ID")
-		local old_child = old_children_map[id]
+		local old_id = child.id
+		assert(old_id, "child in old tree must have an ID")
+		local old_child = old_children_map[old_id]
 		assert(old_child)
-		assert(#old_id_map[id] == 1, "old ID should only occur once")
-		local new_child = new_tree:remove_child_by_id(id)
-		if new_child then
+		assert(#old_id_map[old_id] == 1, "old ID should only occur once")
+		local present_in_new_tree, new_child = new_tree:remove_child_by_id(old_id)
+		if present_in_new_tree then
+      assert(new_child)
 			local new_name = new_child.name
-			local is_copy = #new_id_map[id] > #old_id_map[id]
+			local is_copy = #new_id_map[old_id] > #old_id_map[old_id]
 			-- If there are more copies of the file than before, only mark files
 			-- with a different name as copies
 			if child.name ~= new_name then
-				table.insert(diffs, { type = is_copy and "copy" or "rename", node = child, to = new_child })
-				new_tree:remove_child_by_id(id)
+        if is_copy then
+          copy_node(old_id, new_child, diffs)
+        else
+          rename_node(old_id, new_name, diffs)
+        end
+				new_tree:remove_child_by_id(old_id)
 			end
 			if child.type == "directory" and new_child.type == "directory" then
 				compute_diffs(child, old_id_map, new_child, new_id_map, diffs)
 			elseif child.type ~= new_child.type then
 				print("Warning: directory type changed")
 			end
-			old_children_to_remove[id] = true
-		elseif vim.tbl_isempty(new_id_map[id]) then
+			old_children_to_remove[old_id] = true
+		elseif vim.tbl_isempty(new_id_map[old_id]) then
 			-- ID was only present in old tree => deletion
-			table.insert(diffs, { type = "delete", node = child })
-			old_children_to_remove[id] = true
+      delete_node(old_id, diffs)
+			old_children_to_remove[old_id] = true
 		else
-      -- print("ID map")
-      -- print(vim.inspect(old_id_map))
-			table.insert(diffs, { type = "move", node = old_id_map[id], to = child })
-			new_tree:remove_child_by_id(id)
+			-- print("ID map")
+			-- print(vim.inspect(old_id_map))
+      move_node(old_id, child, diffs)
+			new_tree:remove_child_by_id(old_id)
 		end
 	end
 	old_tree:remove_children_by_ids(old_children_to_remove)
@@ -88,7 +113,7 @@ local compute_inserts = function(old_tree, new_tree, diffs)
 	end
 	new_tree:for_each(function(node)
 		if node.id == nil and not node:is_root() then
-			table.insert(diffs, { type = "create", node = node })
+      create_node(node, diffs)
 		end
 	end)
 end
@@ -99,7 +124,7 @@ end
 local verify_trees = function(old_tree, new_tree)
 	local ok = true
 	new_tree:for_each(function(dir)
-		-- why is this now allowed??
+		-- TODO: why is this now allowed??
 		if not tree_ops.contains_unique_names(dir) then
 			ok = false
 		end
