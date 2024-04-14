@@ -3,33 +3,6 @@ local diff = require("editree.diff")
 
 local unwrap = require("tests.utils").unwrap
 
-local remove_parents = function(diffs)
-	local remove_from_tree = function(node)
-		node.parent = nil
-		if node.type == "directory" then
-			node:for_each(function(child)
-				child.parent = nil
-			end)
-		end
-	end
-
-	for _, diff_ in ipairs(diffs) do
-		if diff_.node then
-			remove_from_tree(diff_.node)
-		end
-		if diff_.to then
-			remove_from_tree(diff_.to)
-		end
-	end
-end
-
-assert.diffs_equal = function(a, b)
-	-- Set parents to nil because we don't want to compare them
-	remove_parents(a)
-	remove_parents(b)
-	return assert.are_same(a, b)
-end
-
 describe("diff", function()
 	it("works for simple rename", function()
 		local old = Tree.new("root")
@@ -73,7 +46,7 @@ describe("diff", function()
 
 		local expected = { { type = "create", node = file } }
 		local actual = unwrap(diff.compute(old, new))
-		assert.diffs_equal(expected, actual)
+		assert.are_same(expected, actual)
 	end)
 
 	it("works for creation with existing directory", function()
@@ -88,7 +61,7 @@ describe("diff", function()
 
 		local expected = { { type = "create", node = file } }
 		local actual = unwrap(diff.compute(old, new))
-		assert.diffs_equal(expected, actual)
+		assert.are_same(expected, actual)
 	end)
 
 	it("works for simple copy", function()
