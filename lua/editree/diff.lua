@@ -11,40 +11,44 @@ local tree_ops = require("editree.tree_ops")
 ---@class DiffDelete
 ---@field type "delete"
 ---@field node_id string
+---@field node editree.Tree?
 
 ---@class DiffRename
 ---@field type "rename"
 ---@field node_id editree.Tree
+---@field node editree.Tree?
 ---@field new_name string
 
 ---@class DiffCopy
 ---@field type "copy"
----@field from_id string
+---@field node_id string
+---@field node editree.Tree?
 ---@field to editree.Tree
 
 ---@class DiffMove
 ---@field type "move"
----@field from_id string
+---@field node_id string
+---@field node editree.Tree?
 ---@field to editree.Tree
 
 local create_node = function(node, diffs)
-  table.insert(diffs, { type = "create", node = node })
+	table.insert(diffs, { type = "create", node = node })
 end
 
 local delete_node = function(node_id, diffs)
-  table.insert(diffs, { type = "delete", node_id = node_id })
+	table.insert(diffs, { type = "delete", node_id = node_id })
 end
 
 local rename_node = function(node_id, new_name, diffs)
-  table.insert(diffs, { type = "rename", node_id = node_id, new_name = new_name })
+	table.insert(diffs, { type = "rename", node_id = node_id, new_name = new_name })
 end
 
-local copy_node = function(from_id, to, diffs)
-  table.insert(diffs, { type = "copy", from_id = from_id, to = to })
+local copy_node = function(node_id, to, diffs)
+	table.insert(diffs, { type = "copy", node_id = node_id, to = to })
 end
 
-local move_node = function(from_id, to, diffs)
-  table.insert(diffs, { type = "move", from_id = from_id, to = to })
+local move_node = function(node_id, to, diffs)
+	table.insert(diffs, { type = "move", node_id = node_id, to = to })
 end
 
 local compute_diffs
@@ -65,17 +69,17 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 		assert(#old_id_map[old_id] == 1, "old ID should only occur once")
 		local present_in_new_tree, new_child = new_tree:remove_child_by_id(old_id)
 		if present_in_new_tree then
-      assert(new_child)
+			assert(new_child)
 			local new_name = new_child.name
 			local is_copy = #new_id_map[old_id] > #old_id_map[old_id]
 			-- If there are more copies of the file than before, only mark files
 			-- with a different name as copies
 			if child.name ~= new_name then
-        if is_copy then
-          copy_node(old_id, new_child, diffs)
-        else
-          rename_node(old_id, new_name, diffs)
-        end
+				if is_copy then
+					copy_node(old_id, new_child, diffs)
+				else
+					rename_node(old_id, new_name, diffs)
+				end
 				new_tree:remove_child_by_id(old_id)
 			end
 			if child.type == "directory" and new_child.type == "directory" then
@@ -86,12 +90,10 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 			old_children_to_remove[old_id] = true
 		elseif vim.tbl_isempty(new_id_map[old_id]) then
 			-- ID was only present in old tree => deletion
-      delete_node(old_id, diffs)
+			delete_node(old_id, diffs)
 			old_children_to_remove[old_id] = true
 		else
-			-- print("ID map")
-			-- print(vim.inspect(old_id_map))
-      move_node(old_id, child, diffs)
+			move_node(old_id, child, diffs)
 			new_tree:remove_child_by_id(old_id)
 		end
 	end
@@ -113,7 +115,7 @@ local compute_inserts = function(old_tree, new_tree, diffs)
 	end
 	new_tree:for_each(function(node)
 		if node.id == nil and not node:is_root() then
-      create_node(node, diffs)
+			create_node(node, diffs)
 		end
 	end)
 end
@@ -145,7 +147,7 @@ end
 
 ---@param old_tree editree.Tree
 ---@param new_tree editree.Tree
----@return boolean success, any
+---@return boolean success, editree.Diff[]
 M.compute = function(old_tree, new_tree)
 	local ok, err = verify_trees(old_tree, new_tree)
 	if not ok then
@@ -153,21 +155,15 @@ M.compute = function(old_tree, new_tree)
 	end
 
 	local diffs = {}
-	compute_diffs(
-		old_tree,
-		tree_ops.get_recursive_id_map(old_tree),
-		new_tree,
-		tree_ops.get_recursive_id_map(new_tree),
-		diffs
-	)
+	local old_id_map = tree_ops.get_recursive_id_map(old_tree)
+	compute_diffs(old_tree, old_id_map, new_tree, tree_ops.get_recursive_id_map(new_tree), diffs)
 	compute_inserts(old_tree, new_tree, diffs)
+	vim.tbl_map(function(diff)
+		if not diff.node then
+			diff.node = old_id_map[diff.node_id]
+		end
+	end, diffs)
 	return true, diffs
 end
 
 return M
-
----@class oil.CreateAction
----@field type "create"
----@field url string
----@field entry_type oil.EntryType
----@field link nil|string

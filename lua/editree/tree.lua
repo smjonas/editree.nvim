@@ -62,18 +62,6 @@ function M:add_file(name, id)
 	return file
 end
 
----Returns the path relative to the root directory
----@return string
-function M:get_rel_path()
-	local parts = {}
-	local node = self
-	while not node:is_root() do
-		table.insert(parts, node.name)
-		node = node.parent
-	end
-	parts = vim.iter(parts):rev():totable()
-	return vim.fs.joinpath((table.unpack or unpack)(parts))
-end
 
 -- TODO: move complex operations to separate class
 ---@param self editree.Tree

@@ -5,8 +5,7 @@ local M = {}
 -- action to save changes (default: BufWrite)
 -- (action to delete tmp buffer and restore original tree view)
 
----@type OilAdapter
-local adapter
+local manager
 
 ---@type table<string, editree.View>
 local viewers
@@ -26,7 +25,7 @@ M.open = function()
 	end
 
 	prev_buffer = vim.api.nvim_get_current_buf()
-	adapter.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false), M.close)
+	manager.init_from_view(viewer, vim.api.nvim_buf_get_lines(0, 0, -1, false), M.close)
 	initialized = true
 end
 
@@ -51,7 +50,7 @@ M.setup = function()
 		vim.notify("[editree] Module oil.adapters.files not found, please install oil.nvim", vim.log.levels.ERROR)
 		return
 	end
-	adapter = require("editree.oil_adapter")
+	manager = require("editree.manager")
 	viewers = require("editree.viewers")
 	require("editree.command").create_commands()
 end
