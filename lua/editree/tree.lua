@@ -44,7 +44,7 @@ function M:add_dir(name, id)
 	local dir = M.new(name, "directory")
 	dir.parent = self
 	dir.depth = self.depth + 1
-  dir.id = id
+	dir.id = id
 	table.insert(self.children, dir)
 	return dir
 end
@@ -57,16 +57,15 @@ function M:add_file(name, id)
 	local file = M.new(name, "file")
 	file.parent = self
 	file.depth = self.depth + 1
-  file.id = id
+	file.id = id
 	table.insert(self.children, file)
 	return file
 end
 
-
 -- TODO: move complex operations to separate class
 ---@param self editree.Tree
 ---@param id string
----@return bool was_present #if there was a child with the given id
+---@return boolean was_present #if there was a child with the given id
 ---@return editree.Tree? child #the removed child if it could be removed or nil if the child with the given ID did not exist
 function M:remove_child_by_id(id)
 	assert(self.type == "directory")
@@ -91,7 +90,7 @@ function M:remove_children_by_ids(ids_to_remove)
 	end, self.children)
 end
 
----@todo: swap arguments for better readability
+---TODO: swap arguments for better readability
 ---Visits each node in the tree in a breadth-first manner and calls fn on every matching node.
 ---@param self editree.Tree
 ---@param type "directory" | "file" | nil
@@ -112,10 +111,11 @@ function M:for_each(fn, type)
 end
 
 ---@param depth integer
-function M:to_string(depth)
+function M:to_string(depth, with_id)
 	local is_dir = self.type == "directory"
-  local suffix = is_dir and "/" or ""
-	local result = ("%s%s%s\n"):format((" "):rep(depth), self.name, suffix)
+	local suffix = is_dir and "/" or ""
+	local id = with_id and self.id and (" [%s]"):format(self.id) or ""
+	local result = ("%s%s%s%s\n"):format((" "):rep(depth), self.name, suffix, id)
 
 	if is_dir then
 		for _, child in ipairs(self.children) do

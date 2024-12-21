@@ -53,25 +53,28 @@ end
 
 local compute_diffs
 ---@param old_tree editree.Tree
+---@param old_id_to_node table<string, editree.Tree>
 ---@param new_tree editree.Tree
+---@param new_id_to_node table<string, editree.Tree>
 ---@param diffs editree.Diff[]
-compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
+compute_diffs = function(old_tree, old_id_to_node, new_tree, new_id_to_node, diffs)
 	assert(old_tree.type == "directory" and new_tree.type == "directory")
 
 	local old_children_map = tree_ops.id_to_child_map(old_tree)
 	local old_children_to_remove = {}
+  print("HH", #new_id_to_node)
 
 	for _, child in ipairs(old_tree.children) do
 		local old_id = child.id
 		assert(old_id, "child in old tree must have an ID")
 		local old_child = old_children_map[old_id]
 		assert(old_child)
-		assert(#old_id_map[old_id] == 1, "old ID should only occur once")
+		assert(#old_id_to_node[old_id] == 1, "old ID should only occur once")
 		local present_in_new_tree, new_child = new_tree:remove_child_by_id(old_id)
 		if present_in_new_tree then
 			assert(new_child)
 			local new_name = new_child.name
-			local is_copy = #new_id_map[old_id] > #old_id_map[old_id]
+			local is_copy = #new_id_to_node[old_id] > #old_id_to_node[old_id]
 			-- If there are more copies of the file than before, only mark files
 			-- with a different name as copies
 			if child.name ~= new_name then
@@ -83,12 +86,16 @@ compute_diffs = function(old_tree, old_id_map, new_tree, new_id_map, diffs)
 				new_tree:remove_child_by_id(old_id)
 			end
 			if child.type == "directory" and new_child.type == "directory" then
-				compute_diffs(child, old_id_map, new_child, new_id_map, diffs)
+				compute_diffs(child, old_id_to_node, new_child, new_id_to_node, diffs)
 			elseif child.type ~= new_child.type then
 				print("Warning: directory type changed")
 			end
 			old_children_to_remove[old_id] = true
-		elseif vim.tbl_isempty(new_id_map[old_id]) then
+		elseif vim.tbl_isempty(new_id_to_node[old_id]) then
+      -- print("KEK")
+      -- print(old_id)
+      -- vim.print(vim.tbl_keys(old_id_to_node))
+      -- vim.print(vim.tbl_keys(new_id_to_node))
 			-- ID was only present in old tree => deletion
 			delete_node(old_id, diffs)
 			old_children_to_remove[old_id] = true
@@ -155,12 +162,17 @@ M.compute = function(old_tree, new_tree)
 	end
 
 	local diffs = {}
-	local old_id_map = tree_ops.get_recursive_id_map(old_tree)
-	compute_diffs(old_tree, old_id_map, new_tree, tree_ops.get_recursive_id_map(new_tree), diffs)
+	local old_id_to_node = tree_ops.get_recursive_id_map(old_tree)
+	local new_id_to_node = tree_ops.get_recursive_id_map(new_tree)
+  -- vim.print(new_tree:to_string(0, true))
+  -- vim.print(old_tree:to_string(0, true))
+	compute_diffs(old_tree, old_id_to_node, new_tree, new_id_to_node, diffs)
 	compute_inserts(old_tree, new_tree, diffs)
+  -- Resolve IDs
 	vim.tbl_map(function(diff)
 		if not diff.node then
-			diff.node = old_id_map[diff.node_id]
+			assert(#old_id_to_node[diff.node_id] == 1, "old ID should only occur once")
+			diff.node = old_id_to_node[diff.node_id][1]
 		end
 	end, diffs)
 	return true, diffs

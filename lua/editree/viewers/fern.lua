@@ -68,9 +68,10 @@ function Fern.preprocess_buf_line(line, line_nr)
 end
 
 function Fern:preprocess_buf_lines(lines)
-	return vim.tbl_map(function(line)
-		return Fern.preprocess_buf_line(line)
-	end, lines)
+  for i, line in ipairs(lines) do
+    lines[i] = Fern.preprocess_buf_line(line, i)
+  end
+  return lines
 end
 
 return Fern

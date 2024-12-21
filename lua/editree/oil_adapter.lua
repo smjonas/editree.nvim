@@ -37,6 +37,7 @@ end
 ---@param diffs editree.Diff[]
 ---@param return_to_view_cb fun()
 M.apply_diffs = function(root_path, diffs, return_to_view_cb)
+  vim.print("Diffs: ", vim.inspect(diffs))
 	local actions = vim.tbl_map(function(diff)
 		return M.diff_to_action(root_path, diff)
 	end, diffs)

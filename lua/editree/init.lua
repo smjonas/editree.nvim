@@ -1,5 +1,6 @@
 local M = {}
 
+
 -- Configurable:
 -- action used to enter / construct editree buffer (default: FileType)
 -- action to save changes (default: BufWrite)
