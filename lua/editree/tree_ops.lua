@@ -75,6 +75,17 @@ function M.id_to_child_map(tree)
 	return map
 end
 
+---Counts the non-root nodes in a tree.
+---@param tree editree.Tree
+---@return integer
+function M.count_nodes(tree)
+	local count = 0
+	tree:for_each(function()
+		count = count + 1
+	end)
+	return count
+end
+
 function M.trees_are_equal(t1, t2)
   if t1.id ~= t2.id or t1.type ~= t2.type then
     return false

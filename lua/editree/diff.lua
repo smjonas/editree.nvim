@@ -62,7 +62,6 @@ compute_diffs = function(old_tree, old_id_to_node, new_tree, new_id_to_node, dif
 
 	local old_children_map = tree_ops.id_to_child_map(old_tree)
 	local old_children_to_remove = {}
-  print("HH", #new_id_to_node)
 
 	for _, child in ipairs(old_tree.children) do
 		local old_id = child.id
@@ -88,14 +87,13 @@ compute_diffs = function(old_tree, old_id_to_node, new_tree, new_id_to_node, dif
 			if child.type == "directory" and new_child.type == "directory" then
 				compute_diffs(child, old_id_to_node, new_child, new_id_to_node, diffs)
 			elseif child.type ~= new_child.type then
-				print("Warning: directory type changed")
+				vim.notify(
+					("[editree] Warning: entry type changed for '%s', ignoring"):format(new_child.name),
+					vim.log.levels.WARN
+				)
 			end
 			old_children_to_remove[old_id] = true
 		elseif vim.tbl_isempty(new_id_to_node[old_id]) then
-      -- print("KEK")
-      -- print(old_id)
-      -- vim.print(vim.tbl_keys(old_id_to_node))
-      -- vim.print(vim.tbl_keys(new_id_to_node))
 			-- ID was only present in old tree => deletion
 			delete_node(old_id, diffs)
 			old_children_to_remove[old_id] = true
@@ -107,19 +105,9 @@ compute_diffs = function(old_tree, old_id_to_node, new_tree, new_id_to_node, dif
 	old_tree:remove_children_by_ids(old_children_to_remove)
 end
 
----@param old_tree editree.Tree
 ---@param new_tree editree.Tree
 ---@param diffs table<editree.Diff>
-local compute_inserts = function(old_tree, new_tree, diffs)
-	local old_id_map = tree_ops.get_recursive_id_map(old_tree)
-	local new_id_map = tree_ops.get_recursive_id_map(new_tree)
-
-	for new_id, nodes in pairs(new_id_map) do
-		local new_node_count = #new_id_map[new_id]
-		if new_node_count > 1 then
-			-- table.insert(diff, {type='insert', node= }, value)
-		end
-	end
+local compute_inserts = function(new_tree, diffs)
 	new_tree:for_each(function(node)
 		if node.id == nil and not node:is_root() then
 			create_node(node, diffs)
@@ -164,11 +152,9 @@ M.compute = function(old_tree, new_tree)
 	local diffs = {}
 	local old_id_to_node = tree_ops.get_recursive_id_map(old_tree)
 	local new_id_to_node = tree_ops.get_recursive_id_map(new_tree)
-  -- vim.print(new_tree:to_string(0, true))
-  -- vim.print(old_tree:to_string(0, true))
 	compute_diffs(old_tree, old_id_to_node, new_tree, new_id_to_node, diffs)
-	compute_inserts(old_tree, new_tree, diffs)
-  -- Resolve IDs
+	compute_inserts(new_tree, diffs)
+	-- Resolve IDs
 	vim.tbl_map(function(diff)
 		if not diff.node then
 			assert(#old_id_to_node[diff.node_id] == 1, "old ID should only occur once")

@@ -19,8 +19,9 @@ end
 
 ---@param line string
 ---@param dir_stack editree.Stack
+---@param id string? optional ID to associate with the parsed node
 ---@return editree.Directory, integer
-local visit_line = function(line, dir_stack)
+local visit_line = function(line, dir_stack, id)
 	-- Count number of leading whitespaces
 	local depth = #line:gsub("^(%s*).*", "%1")
 
@@ -31,9 +32,9 @@ local visit_line = function(line, dir_stack)
 	local parent_dir = dir_stack:top()
 	local name, _ = line:sub(depth + 1)
 	if is_file(name) then
-		parent_dir:add_file(clean_node_name(name))
+		parent_dir:add_file(clean_node_name(name), id)
 	else
-		local new_dir = parent_dir:add_dir(clean_node_name(name))
+		local new_dir = parent_dir:add_dir(clean_node_name(name), id)
 		dir_stack:push(new_dir)
 	end
 	return parent_dir, depth
@@ -116,7 +117,7 @@ M.parse_tree_with_ids = function(lines, ignore_invalid_ids, preprocess_buf_line)
 		end
     -- Need to remove view-specific characters after removing ID
     lines[i] = preprocess_buf_line(lines[i], i)
-		cur_dir = visit_line(lines[i], dir_stack)
+		cur_dir = visit_line(lines[i], dir_stack, id)
 	end
 	return true, tree
 end

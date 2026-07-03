@@ -24,9 +24,12 @@ end
 
 M.from_filetype = function(filetype)
 	if filetype == "fern" then
-		local fern = require("editree.viewers.fern")
-		local fern_nerdfont = require("editree.viewers.fern_nerdfont")
-		return vim.g["fern#renderer"] == "nerdfont" and fern_nerdfont or fern
+		if vim.g["fern#renderer"] == "nerdfont" then
+			-- The nerdfont renderer strips/replaces default fern symbols with icons that
+			-- editree.viewers.fern does not know how to parse; not supported yet.
+			return nil
+		end
+		return require("editree.viewers.fern")
 	end
 end
 

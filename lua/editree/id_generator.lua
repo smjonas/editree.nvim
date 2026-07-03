@@ -5,6 +5,12 @@ local cur_id = 1
 ---@type integer #the maximum number of IDs to generate
 M.max_num_ids = nil
 
+---Resets the generator so IDs restart at 1. Must be called before each new tree is assigned IDs.
+M.reset = function()
+	cur_id = 1
+	M.max_num_ids = nil
+end
+
 ---@param id integer
 ---@param max_id integer
 ---@return string

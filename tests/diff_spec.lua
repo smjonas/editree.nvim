@@ -6,21 +6,21 @@ local unwrap = require("tests.utils").unwrap
 describe("diff", function()
 	it("works for simple rename", function()
 		local old = Tree.new("root")
-		old:add_file("file.txt", "001")
+		local file = old:add_file("file.txt", "001")
 		local new = Tree.new("root")
 		new:add_file("renamed_file.txt", "001")
 
-		local expected = { { type = "rename", node_id = "001", new_name = "renamed_file.txt" } }
+		local expected = { { type = "rename", node_id = "001", new_name = "renamed_file.txt", node = file } }
 		local actual = unwrap(diff.compute(old, new))
 		assert.are_same(expected, actual)
 	end)
 
 	it("works for simple deletion", function()
 		local old = Tree.new("root")
-		old:add_file("file1.txt", "001")
+		local file = old:add_file("file1.txt", "001")
 		local new = Tree.new("root")
 
-		local expected = { { type = "delete", node_id = "001" } }
+		local expected = { { type = "delete", node_id = "001", node = file } }
 		local actual = unwrap(diff.compute(old, new))
 		assert.are_same(expected, actual)
 	end)
@@ -29,12 +29,12 @@ describe("diff", function()
 		local old = Tree.new("root")
 		local child = old:add_dir("child", "001")
 		child:add_file("file1.txt", "002")
-		child:add_file("file2.txt", "003")
+		local file2 = child:add_file("file2.txt", "003")
 
 		local new = Tree.new("root")
 		new:add_dir("child", "001"):add_file("file1.txt", "002")
 
-		local expected = { { type = "delete", node_id = "003" } }
+		local expected = { { type = "delete", node_id = "003", node = file2 } }
 		local actual = unwrap(diff.compute(old, new))
 		assert.are_same(expected, actual)
 	end)
